@@ -21,9 +21,9 @@ create table teams_stats(
 	team_id int(11) unsigned not null,
 	map_id int(11) unsigned not null,
 	times_played int(11) not null,
-	ct_rate_win int(11) not null,
-	tr_rate_win int(11) not null,
-	both_rate_win int(11) not null,
+	ct_rate_win decimal(5,3) not null,
+	tr_rate_win decimal(5,3) not null,
+	both_rate_win decimal(5,3) not null,
 	created_at timestamp not null default current_timestamp,
 	constraint team_id_fk foreign key (team_id) references teams(id),
 	constraint map_id_fk foreign key (map_id) references maps(id)

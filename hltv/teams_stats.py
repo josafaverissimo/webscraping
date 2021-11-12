@@ -119,9 +119,9 @@ def storeTeamsPerformance(teams_performance):
 
                 times_played = team_performance_in_map['times_played']
                 rate_win_sides = {
-                    'ct': team_performance_in_map['rate_win_sides']['ct'],
-                    'tr': team_performance_in_map['rate_win_sides']['tr'],
-                    'both': team_performance_in_map['rate_win_sides']['both']
+                    'ct': float(team_performance_in_map['rate_win_sides']['ct'].replace('%', '')),
+                    'tr': float(team_performance_in_map['rate_win_sides']['tr'].replace('%', '')),
+                    'both': float(team_performance_in_map['rate_win_sides']['both'].replace('%', ''))
                 }
 
                 if map_name in maps_stored:
