@@ -83,9 +83,9 @@ def getTeamsPerformanceByMapAndPeriod(map = None, period = None):
 
             for row in table_rows:
                 team_performance = row.findAll('td')
-                team = team_performance[columns_by_order['team']].get_text()
-                times_played = team_performance[columns_by_order['times_played']].get_text()
-                rate_win = team_performance[columns_by_order['rate_win']].get_text()
+                team = team_performance[columns_by_order['team']].get_text().lower()
+                times_played = int(team_performance[columns_by_order['times_played']].get_text())
+                rate_win = float(team_performance[columns_by_order['rate_win']].get_text().replace('%', ''))
                 
                 if team not in performance:
                     performance[team] = {
@@ -137,7 +137,7 @@ def storeTeamsPerformance(teams_performance):
 
                 times_played = team_performance_in_map['times_played']
 
-                rate_win_sides = {side: float(rate_win.replace('%', '')) for (side, rate_win) in team_performance_in_map['rate_win_sides'].items()}
+                rate_win_sides = {side: rate_win for (side, rate_win) in team_performance_in_map['rate_win_sides'].items()}
                 if map_name in maps_stored:
                     map_id = maps_stored[map_name]
                 else:
