@@ -3,6 +3,7 @@ from urllib.error import HTTPError, URLError
 from bs4 import BeautifulSoup
 from datetime import date, timedelta
 import pymysql
+import json
 
 def getPage(url):
     headers = {
@@ -105,11 +106,28 @@ def storeTeamsPerformance(teams_performance):
     cur = conn.cursor()
 
     try:
-        cur.execute('select id, name from teams')
-        teams_stored = {team: id for (id, team) in cur.fetchall()}
+        cur.execute('''
+            select t.id team_id, t.name team, group_concat(json_object("name", m.name, "id", m.id) separator ';') maps from teams_stats ts
+            join teams t on t.id = ts.team_id
+            join maps m on m.id = ts.map_id
+            group by t.id;
+        ''')
 
-        cur.execute('select id, name from maps')
-        maps_stored = {map: id for (id, map) in cur.fetchall()}
+        teams_stored = {}
+        maps_stored = {}
+
+        for (team_id, team, maps_played) in cur.fetchall():
+            teams_stored[team] = {
+                'id': team_id,
+                'maps_played': {}
+            }
+            
+            for map_json in maps_played.split(';'):
+                map = json.loads(map_json)
+                teams_stored[team]['maps_played'][map['name']] = map['id']
+
+                if map['name'] not in maps_stored:
+                    maps_stored[map['name']] = map['id']
 
         for team_name in teams_performance:
             team_performance = teams_performance[team_name]
@@ -118,12 +136,8 @@ def storeTeamsPerformance(teams_performance):
                 team_performance_in_map = team_performance[map_name]
 
                 times_played = team_performance_in_map['times_played']
-                rate_win_sides = {
-                    'ct': float(team_performance_in_map['rate_win_sides']['ct'].replace('%', '')),
-                    'tr': float(team_performance_in_map['rate_win_sides']['tr'].replace('%', '')),
-                    'both': float(team_performance_in_map['rate_win_sides']['both'].replace('%', ''))
-                }
 
+                rate_win_sides = {side: float(rate_win.replace('%', '')) for (side, rate_win) in team_performance_in_map['rate_win_sides'].items()}
                 if map_name in maps_stored:
                     map_id = maps_stored[map_name]
                 else:
@@ -134,18 +148,26 @@ def storeTeamsPerformance(teams_performance):
                     maps_stored[map_name] = map_id
 
                 if team_name in teams_stored:
-                    team_id = teams_stored[team_name]
+                    team_id = teams_stored[team_name]['id']
                 else:
                     cur.execute('insert into teams (name) values (%s) ', (team_name))
                     cur.execute('select last_insert_id()')
                     team_id = cur.fetchone()[0]
 
-                    teams_stored[team_name] = team_id
+                    teams_stored[team_name] = {
+                        'id': team_id,
+                        'maps_played': {}
+                    }
 
-                cur.execute('''
-                    insert into teams_stats (team_id, map_id, times_played, ct_rate_win, tr_rate_win, both_rate_win)
-                    values (%s, %s, %s, %s, %s, %s)
-                ''', (team_id, map_id, times_played, rate_win_sides['ct'], rate_win_sides['tr'], rate_win_sides['both']))
+                if map_name in teams_stored[team_name]['maps_played']:
+                    print(f"{team_name} have alredy played the map {map_name}")
+                else:
+                    cur.execute('''
+                        insert into teams_stats (team_id, map_id, times_played, ct_rate_win, tr_rate_win, both_rate_win)
+                        values (%s, %s, %s, %s, %s, %s)
+                    ''', (team_id, map_id, times_played, rate_win_sides['ct'], rate_win_sides['tr'], rate_win_sides['both']))
+
+                    teams_stored[team_name]['maps_played'][map_name] = map_id
 
                 cur.connection.commit()
 
@@ -158,10 +180,10 @@ def storeTeamsPerformance(teams_performance):
 
 MONTH = timedelta(days=30)
 
-continue_getting_data = 1
-FLAGS = range(9)
-FLAG_MESSAGE = '0 < FLAG > 9'
-while(continue_getting_data in FLAGS):
+continue_getting_data = 'y'
+FLAGS = ['n']
+FLAG_MESSAGE = 'y/n'
+while(continue_getting_data not in FLAGS):
     months = int(input('type mounths diff to subtract: '))
     map = str(input('type map: '))
 
@@ -172,4 +194,4 @@ while(continue_getting_data in FLAGS):
 
     storeTeamsPerformance(getTeamsPerformanceByMapAndPeriod(map, period))
 
-    continue_getting_data = int(input(f"do you want get more data? [{FLAG_MESSAGE}]: "))
+    continue_getting_data = input(f"do you want get more data? [{FLAG_MESSAGE}]: ")
