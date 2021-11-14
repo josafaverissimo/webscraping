@@ -1,4 +1,4 @@
-import utils.database.conf as conf
+from .db_configs import default_config
 import pymysql
 
 class Sql:
@@ -7,6 +7,9 @@ class Sql:
 
         if isinstance(args, str):
             return f"\'{args}\'"
+
+        if isinstance(args, int):
+            return args
 
         for arg in args:
             if isinstance(arg, str):
@@ -17,7 +20,7 @@ class Sql:
         return tuple(args_normalized)
 
     def open_connection(self):
-        self.connection = pymysql.connect(host=conf.HOST, user=conf.USER, passwd=conf.PASSWORD, db=conf.DB)
+        self.connection = pymysql.connect(host=default_config['host'], user=default_config['user'], passwd=default_config['password'], db=default_config['db'])
         self.cursor = self.connection.cursor()
     
     def close_connection(self):

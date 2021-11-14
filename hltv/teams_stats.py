@@ -43,7 +43,7 @@ def get_teams_performance_by_map_and_period(map = None, period = None):
     def get_performance(map):
         urls = get_urls(map, period)
         performance = {}
-        columns_by_order = {'team': 0, 'times_played': 1, 'rate_win': 2}
+        columns_by_order = {'team': 0, 'times_played': 1, 'rate_win': 2, 'hltv_id': 2}
         
         for side in urls:
             url = urls[side]
@@ -58,19 +58,29 @@ def get_teams_performance_by_map_and_period(map = None, period = None):
 
             for row in table_rows:
                 team_performance = row.findAll('td')
+                
+                hltv_id = int(
+                    team_performance[columns_by_order['team']]
+                    .find(lambda tag: 'href' in tag.attrs).attrs['href'][1::]
+                    .split('/')[columns_by_order['hltv_id']]
+                )
+
                 team = team_performance[columns_by_order['team']].get_text().lower()
                 times_played = int(team_performance[columns_by_order['times_played']].get_text())
                 rate_win = float(team_performance[columns_by_order['rate_win']].get_text().replace('%', ''))
                 
                 if team not in performance:
                     performance[team] = {
-                        map: {
-                            'times_played': times_played,
-                            'rate_win_sides': {}
+                        'hltv_id': hltv_id,
+                        'maps_played': {
+                            map: {
+                                'times_played': times_played,
+                                'rate_win_sides': {}
+                            }
                         }
                     }
 
-                performance[team][map]['rate_win_sides'][side] = rate_win
+                performance[team]['maps_played'][map]['rate_win_sides'][side] = rate_win
 
         return performance
 
@@ -112,12 +122,13 @@ def store_teams_performance(teams_performance):
         for team_name in teams_performance:
             team_performance = teams_performance[team_name]
 
-            for map_name in team_performance:
-                team_performance_in_map = team_performance[map_name]
+            for map_name in team_performance['maps_played']:
+                team_performance_in_map = team_performance['maps_played'][map_name]
 
                 times_played = team_performance_in_map['times_played']
 
                 rate_win_sides = {side: rate_win for (side, rate_win) in team_performance_in_map['rate_win_sides'].items()}
+
                 if map_name in maps_stored:
                     map_id = maps_stored[map_name]
                 else:
@@ -129,7 +140,7 @@ def store_teams_performance(teams_performance):
                 if team_name in teams_stored:
                     team_id = teams_stored[team_name]['id']
                 else:
-                    sql.execute(query = 'insert into teams (name) values (%s)', args = (team_name))
+                    sql.execute(query = 'insert into teams (name, hltv_id) values (%s, %s)', args = (team_name, team_performance['hltv_id']))
                     team_id = sql.last_insert_id()
 
                     teams_stored[team_name] = {
@@ -146,10 +157,6 @@ def store_teams_performance(teams_performance):
                     ''', args = (team_id, map_id, times_played, rate_win_sides['ct'], rate_win_sides['tr'], rate_win_sides['both']))
 
                     teams_stored[team_name]['maps_played'][map_name] = map_id
-
-            print(team_name, team_performance)
-
-        print("success to save data")
     finally:
         sql.close_connection()
 

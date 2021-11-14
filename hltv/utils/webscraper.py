@@ -10,8 +10,7 @@ def get_page(url):
         return None
 
     html = BeautifulSoup(response.read(), 'html.parser')
-
-    print(f'SUCCESS to get {url}')
+    
     return html
 
 def get_data_from_json_api(url):
@@ -21,8 +20,6 @@ def get_data_from_json_api(url):
         return None
 
     response = json.loads(response.read())
-
-    print(f'SUCCESS to get {url}')
 
     return response
 
