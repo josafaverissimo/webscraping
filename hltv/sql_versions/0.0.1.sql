@@ -1,0 +1,1 @@
+alter table teams add column hltv_id int(11) unsigned after name;

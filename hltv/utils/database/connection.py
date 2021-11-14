@@ -29,7 +29,8 @@ class Sql:
         if args is not None:
             query = query % self._normalize_args(args)
             
-        self.cursor.execute(query)
+        self._last_query = query
+        self._affected_rows = self.cursor.execute(query)
 
         return callback(self.cursor) if callback != None else self
 
@@ -45,3 +46,9 @@ class Sql:
         '''
 
         return self.execute(query).fetchone()[0]
+
+    def get_affect_rows(self):
+        return self._affected_rows
+
+    def get_last_query(self):
+        return self._last_query

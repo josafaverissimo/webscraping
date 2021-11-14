@@ -1,11 +1,11 @@
-from utils.webscrapper import get_page
+from utils.webscraper import get_page
 from datetime import date, timedelta
 from utils.database.connection import Sql
 from utils.helpers import subtract_date_by_difference, days_by_period
 import json
 
 def get_teams_performance_by_map_and_period(map = None, period = None):
-    def getURLS(map = None, period = None):
+    def get_urls(map = None, period = None):
         sides = {
             'tr': 'TERRORIST',
             'ct': 'COUNTER_TERRORIST'
@@ -40,8 +40,8 @@ def get_teams_performance_by_map_and_period(map = None, period = None):
 
         return urls
 
-    def getPerformance(map):
-        urls = getURLS(map, period)
+    def get_performance(map):
+        urls = get_urls(map, period)
         performance = {}
         columns_by_order = {'team': 0, 'times_played': 1, 'rate_win': 2}
         
@@ -74,7 +74,7 @@ def get_teams_performance_by_map_and_period(map = None, period = None):
 
         return performance
 
-    return getPerformance(map)
+    return get_performance(map)
 
 def store_teams_performance(teams_performance):
     sql = Sql()
@@ -83,9 +83,9 @@ def store_teams_performance(teams_performance):
         sql.open_connection()
     
         teams_stats = sql.execute(query = '''
-            select t.id team_id, t.name team, group_concat(json_object("name", m.name, "id", m.id) separator ';') maps from teams_stats ts
-            join teams t on t.id = ts.team_id
-            join maps m on m.id = ts.map_id
+            select t.id team_id, t.name team, group_concat(json_object("name", m.name, "id", m.id) separator ';') maps from teams t
+            left join teams_stats ts on ts.team_id = t.id
+            left join maps m on m.id = ts.map_id
             group by t.id;
         ''').fetchall()
 
@@ -100,6 +100,10 @@ def store_teams_performance(teams_performance):
             
             for map_json in maps_played.split(';'):
                 map = json.loads(map_json)
+
+                if map['name'] is None:
+                    continue
+
                 teams_stored[team]['maps_played'][map['name']] = map['id']
 
                 if map['name'] not in maps_stored:
