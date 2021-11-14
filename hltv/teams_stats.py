@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 from datetime import date, timedelta
 import pymysql
 import json
+from utils.database.connection import Sql
 
 def getPage(url):
     headers = {
@@ -102,21 +103,22 @@ def getTeamsPerformanceByMapAndPeriod(map = None, period = None):
     return getPerformance(map)
 
 def storeTeamsPerformance(teams_performance):
-    conn = pymysql.connect(host='127.0.0.1', user='root', passwd='', db='hltv')
-    cur = conn.cursor()
+    sql = Sql()
 
     try:
-        cur.execute('''
+        sql.open_connection()
+    
+        teams_stats = sql.execute(query = '''
             select t.id team_id, t.name team, group_concat(json_object("name", m.name, "id", m.id) separator ';') maps from teams_stats ts
             join teams t on t.id = ts.team_id
             join maps m on m.id = ts.map_id
             group by t.id;
-        ''')
+        ''').fetchall()
 
         teams_stored = {}
         maps_stored = {}
 
-        for (team_id, team, maps_played) in cur.fetchall():
+        for (team_id, team, maps_played) in teams_stats:
             teams_stored[team] = {
                 'id': team_id,
                 'maps_played': {}
@@ -141,18 +143,16 @@ def storeTeamsPerformance(teams_performance):
                 if map_name in maps_stored:
                     map_id = maps_stored[map_name]
                 else:
-                    cur.execute('insert into maps (name) values (%s) ', (map_name))
-                    cur.execute('select last_insert_id()')
-                    map_id = cur.fetchone()[0]
+                    sql.execute(query = 'insert into maps (name) values (%s)', args = (map_name))
+                    map_id = sql.last_insert_id()
 
                     maps_stored[map_name] = map_id
 
                 if team_name in teams_stored:
                     team_id = teams_stored[team_name]['id']
                 else:
-                    cur.execute('insert into teams (name) values (%s) ', (team_name))
-                    cur.execute('select last_insert_id()')
-                    team_id = cur.fetchone()[0]
+                    sql.execute(query = 'insert into teams (name) values (%s)', args = (team_name))
+                    team_id = sql.last_insert_id()
 
                     teams_stored[team_name] = {
                         'id': team_id,
@@ -162,21 +162,18 @@ def storeTeamsPerformance(teams_performance):
                 if map_name in teams_stored[team_name]['maps_played']:
                     print(f"{team_name} have alredy played the map {map_name}")
                 else:
-                    cur.execute('''
+                    sql.execute(query = '''
                         insert into teams_stats (team_id, map_id, times_played, ct_rate_win, tr_rate_win, both_rate_win)
                         values (%s, %s, %s, %s, %s, %s)
-                    ''', (team_id, map_id, times_played, rate_win_sides['ct'], rate_win_sides['tr'], rate_win_sides['both']))
+                    ''', args = (team_id, map_id, times_played, rate_win_sides['ct'], rate_win_sides['tr'], rate_win_sides['both']))
 
                     teams_stored[team_name]['maps_played'][map_name] = map_id
+                    
+            print(team_name, team_performance)
 
-                cur.connection.commit()
-
-                print(team_performance)
-
-        print("success to save data")
+            print("success to save data")
     finally:
-        cur.close()
-        conn.close()
+        sql.close_connection()
 
 MONTH = timedelta(days=30)
 
