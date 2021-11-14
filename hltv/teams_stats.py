@@ -1,36 +1,10 @@
-from urllib.request import urlopen, Request
-from urllib.error import HTTPError, URLError
-from bs4 import BeautifulSoup
+from utils.webscrapper import get_page
 from datetime import date, timedelta
-import pymysql
-import json
 from utils.database.connection import Sql
+from utils.helpers import subtract_date_by_difference, days_by_period
+import json
 
-def getPage(url):
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:95.0) Gecko/20100101 Firefox/95.0',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US'
-    }
-
-    html = None
-
-    try:
-        request = Request(url, headers=headers)
-        response = urlopen(request).read()
-        html = BeautifulSoup(response, 'html.parser')    
-    except HTTPError as e:
-        print(e)
-    except URLError as e:
-        print(e)
-    finally:
-        print(f"success to get: {url}")
-        return html
-
-def subtractDateByDifference(date, diff):
-    return (date.replace(day=1) - diff).replace(day=date.day)
-
-def getTeamsPerformanceByMapAndPeriod(map = None, period = None):
+def get_teams_performance_by_map_and_period(map = None, period = None):
     def getURLS(map = None, period = None):
         sides = {
             'tr': 'TERRORIST',
@@ -48,7 +22,7 @@ def getTeamsPerformanceByMapAndPeriod(map = None, period = None):
             today = date.today()
 
             period = {
-                'start': subtractDateByDifference(date.today(), YEAR).isoformat(),
+                'start': subtract_date_by_difference(date.today(), days_by_period['year']).isoformat(),
                 'end': today.isoformat()
             }
 
@@ -74,7 +48,7 @@ def getTeamsPerformanceByMapAndPeriod(map = None, period = None):
         for side in urls:
             url = urls[side]
 
-            html = getPage(url)
+            html = get_page(url)
 
             if(html == None):
                 continue
@@ -102,7 +76,7 @@ def getTeamsPerformanceByMapAndPeriod(map = None, period = None):
 
     return getPerformance(map)
 
-def storeTeamsPerformance(teams_performance):
+def store_teams_performance(teams_performance):
     sql = Sql()
 
     try:
@@ -168,14 +142,12 @@ def storeTeamsPerformance(teams_performance):
                     ''', args = (team_id, map_id, times_played, rate_win_sides['ct'], rate_win_sides['tr'], rate_win_sides['both']))
 
                     teams_stored[team_name]['maps_played'][map_name] = map_id
-                    
+
             print(team_name, team_performance)
 
-            print("success to save data")
+        print("success to save data")
     finally:
         sql.close_connection()
-
-MONTH = timedelta(days=30)
 
 continue_getting_data = 'y'
 FLAGS = ['n']
@@ -185,10 +157,10 @@ while(continue_getting_data not in FLAGS):
     map = str(input('type map: '))
 
     period = {
-        'start': subtractDateByDifference(date.today(), MONTH * months),
+        'start': subtract_date_by_difference(date.today(), days_by_period['month'] * months),
         'end': date.today()
     }
 
-    storeTeamsPerformance(getTeamsPerformanceByMapAndPeriod(map, period))
+    store_teams_performance(get_teams_performance_by_map_and_period(map, period))
 
     continue_getting_data = input(f"do you want get more data? [{FLAG_MESSAGE}]: ")
