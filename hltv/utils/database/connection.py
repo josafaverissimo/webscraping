@@ -22,6 +22,7 @@ class Sql:
     def open_connection(self):
         self.connection = pymysql.connect(host=default_config['host'], user=default_config['user'], passwd=default_config['password'], db=default_config['db'])
         self.cursor = self.connection.cursor()
+        self.__error_log = None
     
     def close_connection(self):
         self.cursor.connection.commit()
@@ -33,15 +34,35 @@ class Sql:
             query = query % self._normalize_args(args)
             
         self._last_query = query
-        self._affected_rows = self.cursor.execute(query)
 
-        return callback(self.cursor) if callback != None else self
+        try:
+            self._affected_rows = self.cursor.execute(query)
+        except pymysql.err.MySQLError as e:
+            self.__error_log = f'\n[{e.args[0]}]\n\t{e.args[1]}\n\n[Last query]\n\t{query}\n'
+            self.failed()
+        finally:
+            return self
+    
+    def failed(self, show_log = True):
+        if self.__error_log is None:
+            return False
+
+        if show_log:
+            print(self.__error_log)
+
+        return True
 
     def fetchall(self):
-        return self.cursor.fetchall()
+        if(not self.failed()):
+            return self.cursor.fetchall()
+
+        return None
 
     def fetchone(self):
-        return self.cursor.fetchone()
+        if(not self.failed()):
+            return self.cursor.fetchone()
+
+        return None
 
     def last_insert_id(self):
         query = '''

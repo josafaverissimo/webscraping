@@ -35,3 +35,10 @@ def get_team_url_page(team):
             return f'{base_url}{team[HLTV_ID]}/{team[NAME]}'
 
     return get_url(team)
+
+def has_none_value(dictonary):
+    for key, value in dictonary.items():
+        if value is None:
+            return True
+
+    return False
