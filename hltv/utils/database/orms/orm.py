@@ -7,7 +7,15 @@ class Base:
         self.__columns = columns
         self.__get_columns = get_columns
         self.__set_columns = set_columns
-        self.__table_name = table_name
+        self._table_name = table_name
+
+    def _query(self, query, args = None):
+        try:
+            self.__sql.open_connection()
+
+            return self.__sql.execute(query, args)
+        finally:
+            self.__sql.close_connection()
 
     def load_by_column(self, column, value):
         team = self.get_by_column(column, value)
@@ -41,7 +49,7 @@ class Base:
         try:
             self.__sql.open_connection()
 
-            return self.__sql.execute(f'select {columns_filtered} from {self.__table_name}').fetchall()
+            return self.__sql.execute(f'select {columns_filtered} from {self._table_name}').fetchall()
         finally:
             self.__sql.close_connection()
 
@@ -52,7 +60,7 @@ class Base:
             self.__sql.open_connection()
             condition = f'{column} = %s'
 
-            return self.__sql.execute(f'select {columns_filtered} from {self.__table_name} where {condition}', value).fetchone()
+            return self.__sql.execute(f'select {columns_filtered} from {self._table_name} where {condition}', value).fetchone()
         finally:
             self.__sql.close_connection()
 
@@ -65,7 +73,7 @@ class Base:
             columns_to_save_values = list(columns_to_save.values())
             params = "%s," * (len(columns_to_save) - 1) + "%s"
             team_id = None
-            query = f'insert into {self.__table_name} ({columns_to_save_name}) values ({params})'
+            query = f'insert into {self._table_name} ({columns_to_save_name}) values ({params})'
 
             
             try:
@@ -95,7 +103,7 @@ class Base:
 
         if self.__columns['id'] is not None:
             query = f'''
-                update {self.__table_name}
+                update {self._table_name}
                 set {columns}
                 where id = {self.__columns['id']}
             '''
@@ -113,7 +121,7 @@ class Base:
     def delete(self):
         if self.__columns['id'] is not None:
             query = f'''
-                delete from {self.__table_name}
+                delete from {self._table_name}
                 where id = {self.__columns['id']}
             '''
             try:

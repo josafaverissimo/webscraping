@@ -53,3 +53,19 @@ class TeamStats(Base):
             return map.get_by_column('id', self.get_column('map_id'))
 
         return None
+
+    def get_maps_by_teams_stats(self):
+        maps_table = 'maps'
+        teams_table = 'teams'
+
+        result = self._query(f'''
+            select t.id team_id, t.name team_name,
+            concat(concat('[', group_concat(json_object("name", m.name, "id", m.id) separator ','), ']')) maps
+            from {teams_table} t
+            left join {self._table_name} ts on ts.team_id = t.id
+            left join {maps_table} m on m.id = ts.map_id
+            group by t.id;
+        ''')
+
+        if not result.failed():
+            return result.fetchall()

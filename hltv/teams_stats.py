@@ -1,11 +1,13 @@
-from utils.webscraper import get_page
-from datetime import date, timedelta
-from utils.database.connection import Sql
-from utils.helpers import subtract_date_by_difference, days_by_period
 import json
+from datetime import date
+from utils.webscraper import get_page
+from utils.helpers import subtract_date_by_difference, days_by_period
+from utils.database.orms.team import Team
+from utils.database.orms.map import Map
+from utils.database.orms.team_stats import TeamStats
 
-def get_teams_performance_by_map_and_period(map = None, period = None):
-    def get_urls(map = None, period = None):
+def get_teams_performance_by_map_and_period(map, period = None):
+    def get_urls(map, period = None):
         sides = {
             'tr': 'TERRORIST',
             'ct': 'COUNTER_TERRORIST'
@@ -28,11 +30,9 @@ def get_teams_performance_by_map_and_period(map = None, period = None):
 
         query_params = {
             'startDate': period['start'],
-            'endDate': period['end']
+            'endDate': period['end'],
+            'maps': f'de_{map}'
         }
-
-        if map != None:
-            query_params['maps'] = f'de_{map}'
 
         for url in urls:
             for query_param in query_params:
@@ -43,11 +43,10 @@ def get_teams_performance_by_map_and_period(map = None, period = None):
     def get_performance(map):
         urls = get_urls(map, period)
         performance = {}
-        columns_by_order = {'team': 0, 'times_played': 1, 'rate_win': 2, 'hltv_id': 2}
+        columns_by_order = {'team': 0, 'times_played': 1, 'rate_win': 2}
+        HLTV_ID = 2
         
-        for side in urls:
-            url = urls[side]
-
+        for side, url in urls.items():
             html = get_page(url)
 
             if(html == None):
@@ -62,7 +61,7 @@ def get_teams_performance_by_map_and_period(map = None, period = None):
                 hltv_id = int(
                     team_performance[columns_by_order['team']]
                     .find(lambda tag: 'href' in tag.attrs).attrs['href'][1::]
-                    .split('/')[columns_by_order['hltv_id']]
+                    .split('/')[HLTV_ID]
                 )
 
                 team = team_performance[columns_by_order['team']].get_text().lower()
@@ -87,91 +86,80 @@ def get_teams_performance_by_map_and_period(map = None, period = None):
     return get_performance(map)
 
 def store_teams_performance(teams_performance):
-    sql = Sql()
+    teamOrm = Team()
+    mapOrm = Map()
+    team_statsOrm = TeamStats()
+    teams_and_maps_stored = team_statsOrm.get_maps_by_teams_stats()
 
-    try:
-        sql.open_connection()
-    
-        teams_stats = sql.execute(query = '''
-            select t.id team_id, t.name team, group_concat(json_object("name", m.name, "id", m.id) separator ';') maps from teams t
-            left join teams_stats ts on ts.team_id = t.id
-            left join maps m on m.id = ts.map_id
-            group by t.id;
-        ''').fetchall()
+    teams_stored = {}
+    maps_stored = {}
 
-        teams_stored = {}
-        maps_stored = {}
+    for team_and_map_stored in teams_and_maps_stored:
+        team_id = team_and_map_stored['team_id']
+        team_name = team_and_map_stored['team_name']
+        maps_played = team_and_map_stored['maps']
 
-        for (team_id, team, maps_played) in teams_stats:
-            teams_stored[team] = {
-                'id': team_id,
-                'maps_played': {}
-            }
-            
-            for map_json in maps_played.split(';'):
-                map = json.loads(map_json)
+        teams_stored[team_name] = {
+            'id': team_id,
+            'maps_played': {}
+        }
+        
+        for map in json.loads(maps_played):
+            if map['name'] is None:
+                continue
 
-                if map['name'] is None:
-                    continue
+            teams_stored[team_name]['maps_played'][map['name']] = map['id']
 
-                teams_stored[team]['maps_played'][map['name']] = map['id']
+            if map['name'] not in maps_stored:
+                maps_stored[map['name']] = map['id']
 
-                if map['name'] not in maps_stored:
-                    maps_stored[map['name']] = map['id']
+    for team_name, team_performance in teams_performance.items():
+        for map_name, team_performance_in_map in team_performance['maps_played'].items():
+            if map_name in maps_stored:
+                map_id = maps_stored[map_name]
+            else:
+                mapOrm.set_column('name', map_name)
+                map_saved = mapOrm.create()
 
-        for team_name in teams_performance:
-            team_performance = teams_performance[team_name]
+                if map_saved is not None:
+                    maps_stored[map_name] = map_saved['id']
 
-            for map_name in team_performance['maps_played']:
-                team_performance_in_map = team_performance['maps_played'][map_name]
+            if team_name in teams_stored:
+                team_id = teams_stored[team_name]['id']
+            else:
+                team_data_to_save = {
+                    'name': team_name,
+                    'hltv_id': team_performance['hltv_id']
+                }
 
-                times_played = team_performance_in_map['times_played']
+                teamOrm.set_columns(team_data_to_save)
+                team_saved = teamOrm.create()
 
-                rate_win_sides = {side: rate_win for (side, rate_win) in team_performance_in_map['rate_win_sides'].items()}
-
-                if map_name in maps_stored:
-                    map_id = maps_stored[map_name]
-                else:
-                    sql.execute(query = 'insert into maps (name) values (%s)', args = (map_name))
-                    map_id = sql.last_insert_id()
-
-                    maps_stored[map_name] = map_id
-
-                if team_name in teams_stored:
-                    team_id = teams_stored[team_name]['id']
-                else:
-                    sql.execute(query = 'insert into teams (name, hltv_id) values (%s, %s)', args = (team_name, team_performance['hltv_id']))
-                    team_id = sql.last_insert_id()
-
+                if team_saved is not None:
                     teams_stored[team_name] = {
-                        'id': team_id,
+                        'id': team_saved['id'],
                         'maps_played': {}
                     }
 
-                if map_name in teams_stored[team_name]['maps_played']:
-                    print(f"{team_name} have alredy played the map {map_name}")
-                else:
-                    sql.execute(query = '''
-                        insert into teams_stats (team_id, map_id, times_played, ct_rate_win, tr_rate_win, both_rate_win)
-                        values (%s, %s, %s, %s, %s, %s)
-                    ''', args = (team_id, map_id, times_played, rate_win_sides['ct'], rate_win_sides['tr'], rate_win_sides['both']))
+            if map_name in teams_stored[team_name]['maps_played']:
+                print(f"{team_name} have alredy played the map {map_name}")
+            else:
+                if team_saved is not None and map_saved is not None:                    
+                    rate_win_sides = {side: rate_win for (side, rate_win) in team_performance_in_map['rate_win_sides'].items()}
 
-                    teams_stored[team_name]['maps_played'][map_name] = map_id
-    finally:
-        sql.close_connection()
+                    team_stats_to_save = {
+                        'team_id': team_saved['id'],
+                        'map_id': map_saved['id'],
+                        'times_played': team_performance_in_map['times_played'],
+                        'ct_rate_win': rate_win_sides['ct'],
+                        'tr_rate_win': rate_win_sides['tr'],
+                        'both_rate_win': rate_win_sides['both'],
+                    }
+                    team_statsOrm.set_columns(team_stats_to_save)
+                    team_stats_saved = team_statsOrm.create()
 
-continue_getting_data = 'y'
-FLAGS = ['n']
-FLAG_MESSAGE = 'y/n'
-while(continue_getting_data not in FLAGS):
-    months = int(input('type mounths diff to subtract: '))
-    map = str(input('type map: '))
+                    if team_stats_saved is not None:
+                        teams_stored[team_name]['maps_played'][map_name] = team_stats_saved['map_id']
 
-    period = {
-        'start': subtract_date_by_difference(date.today(), days_by_period['month'] * months),
-        'end': date.today()
-    }
 
-    store_teams_performance(get_teams_performance_by_map_and_period(map, period))
-
-    continue_getting_data = input(f"do you want get more data? [{FLAG_MESSAGE}]: ")
+store_teams_performance(get_teams_performance_by_map_and_period('inferno'))
