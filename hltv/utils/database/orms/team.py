@@ -1,13 +1,13 @@
 from .orm import Base
 
 class Team(Base):
-    def __init__(self, name = None, hltv_id = None, id = None, created_at = None):
+    def __init__(self, name = None, hltv_id = None):
         table_name = 'teams'
         columns = {
-            'id': id,
+            'id': None,
             'name': name,
             'hltv_id': hltv_id,
-            'created_at': created_at
+            'created_at': None
         }
 
         get_columns = {}

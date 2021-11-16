@@ -31,6 +31,10 @@ class Base:
         if(column in self.__set_columns):
             self.__columns[column] = self.__set_columns[column](value)
 
+    def set_columns(self, columns):
+        for column, value in columns.items():
+            self.set_column(column, value)
+
     def get_all(self, columns_filtered = None):
         columns_filtered = "*" if columns_filtered is None else ', '.join(columns_filtered)
 
