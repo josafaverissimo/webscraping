@@ -20,8 +20,13 @@ class Sql:
         return tuple(args_normalized)
 
     def open_connection(self):
-        self.connection = pymysql.connect(host=default_config['host'], user=default_config['user'], passwd=default_config['password'], db=default_config['db'])
-        self.cursor = self.connection.cursor()
+        self.connection = pymysql.connect(
+            host = default_config['host'],
+            user = default_config['user'],
+            passwd = default_config['password'],
+            db = default_config['db']
+        )
+        self.cursor = self.connection.cursor(cursor = pymysql.cursors.DictCursor)
         self.__error_log = None
     
     def close_connection(self):
@@ -39,11 +44,11 @@ class Sql:
             self._affected_rows = self.cursor.execute(query)
         except pymysql.err.MySQLError as e:
             self.__error_log = f'\n[{e.args[0]}]\n\t{e.args[1]}\n\n[Last query]\n\t{query}\n'
-            self.failed()
+            self.failed(show_log = True)
         finally:
             return self
     
-    def failed(self, show_log = True):
+    def failed(self, show_log = False):
         if self.__error_log is None:
             return False
 
@@ -66,10 +71,10 @@ class Sql:
 
     def last_insert_id(self):
         query = '''
-            select last_insert_id()
+            select last_insert_id() id
         '''
 
-        return self.execute(query).fetchone()[0]
+        return self.execute(query).fetchone()['id']
 
     def get_affect_rows(self):
         return self._affected_rows

@@ -8,6 +8,12 @@ class Base:
         self.__get_columns = get_columns
         self.__set_columns = set_columns
         self.__table_name = table_name
+
+    def load_by_column(self, column, value):
+        team = self.get_by_column(column, value)
+
+        if team is not None:
+            self.__columns = team
     
     def get_column(self, column):
         if column not in self.__columns:
@@ -73,3 +79,45 @@ class Base:
                 return self.get_by_column('id', team_id)
 
         return None
+
+    def update(self, columns = None):
+        if columns is not None:
+            columns = [column for column in columns if column in self.__set_columns]
+        else:
+            columns = self.__set_columns
+
+        columns_values = [self.get_column(column) for column in columns]
+        columns = ' = %s, '.join(columns) + ' = %s'
+
+        if self.__columns['id'] is not None:
+            query = f'''
+                update {self.__table_name}
+                set {columns}
+                where id = {self.__columns['id']}
+            '''
+
+            try:
+                self.__sql.open_connection()
+
+                result = self.__sql.execute(query, columns_values)
+
+                if not result.failed():
+                    return result.get_affect_rows()
+            finally:
+                self.__sql.close_connection()
+
+    def delete(self):
+        if self.__columns['id'] is not None:
+            query = f'''
+                delete from {self.__table_name}
+                where id = {self.__columns['id']}
+            '''
+            try:
+                self.__sql.open_connection()
+
+                result = self.__sql.execute(query)
+
+                if not result.failed():
+                    return result.get_affect_rows()
+            finally:
+                self.__sql.close_connection()
