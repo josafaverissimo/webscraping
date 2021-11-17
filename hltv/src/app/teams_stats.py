@@ -1,10 +1,10 @@
 import json
 from datetime import date
-from utils.webscraper import get_page
-from utils.helpers import subtract_date_by_difference, days_by_period
-from utils.database.orms.team import Team
-from utils.database.orms.map import Map
-from utils.database.orms.team_stats import TeamStats
+from .utils.webscraper import get_page
+from .utils.helpers import subtract_date_by_difference, days_by_period
+from .utils.database.orms.team import Team
+from .utils.database.orms.map import Map
+from .utils.database.orms.team_stats import TeamStats
 
 def get_teams_performance_by_map_and_period(map, period = None):
     def get_urls(map, period = None):
@@ -114,6 +114,8 @@ def store_teams_performance(teams_performance):
                 maps_stored[map['name']] = map['id']
 
     for team_name, team_performance in teams_performance.items():
+        team_saved = None
+
         for map_name, team_performance_in_map in team_performance['maps_played'].items():
             if map_name in maps_stored:
                 map_id = maps_stored[map_name]
@@ -160,6 +162,3 @@ def store_teams_performance(teams_performance):
 
                     if team_stats_saved is not None:
                         teams_stored[team_name]['maps_played'][map_name] = team_stats_saved['map_id']
-
-
-store_teams_performance(get_teams_performance_by_map_and_period('inferno'))

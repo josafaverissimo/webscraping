@@ -1,5 +1,5 @@
-from utils.webscraper import get_data_from_json_api
-from utils.database.connection import Sql
+from .utils.webscraper import get_data_from_json_api
+from .utils.database.connection import Sql
 
 def get_team_by_name(name):
     name = name.lower()
