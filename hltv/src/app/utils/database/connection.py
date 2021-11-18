@@ -6,6 +6,8 @@ class Sql:
         args_normalized = []
 
         if isinstance(args, str):
+            args = args.replace("'", "\\'")
+
             return f"\'{args}\'"
 
         if isinstance(args, int):
@@ -13,6 +15,8 @@ class Sql:
 
         for arg in args:
             if isinstance(arg, str):
+                arg = arg.replace("'", "\\'")
+
                 args_normalized.append(f"\'{arg}\'")
             else:
                 args_normalized.append(arg)

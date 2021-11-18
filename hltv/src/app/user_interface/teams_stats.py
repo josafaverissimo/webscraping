@@ -1,20 +1,39 @@
-print('__file__={0:<35} | __name__={1:<25} | __package__={2:<25}'.format(__file__,__name__,str(__package__)))
-
 from .. import teams_stats
+from .interface import Boilerplate
 from ..utils.helpers import subtract_date_by_difference, days_by_period
 from datetime import date
 
-def get_user_input():
-    months = int(input("Type months diff: "))
-    map = input("Type map: ")
+class TeamsStats(Boilerplate):
+    def __init__(self):
+        inputs = {
+            'months': {
+                'datatype': int,
+                'validation': self.valid_months,
+                'message': 'Type months diff'
+            },
+            'map': {
+                'datatype': str,
+                'validation': None,
+                'message': 'Type a map'
+            }
+        }
 
-    period = {
-        'start': subtract_date_by_difference(date.today(), days_by_period['month'] * months).isoformat(),
-        'end': date.today()
-    }
+        super().__init__(inputs, self.main)
 
-    team_performance = teams_stats.get_teams_performance_by_map_and_period(map)
-    teams_stats.store_teams_performance(team_performance)
+    def valid_months(self, months):
+        if months.isnumeric():
+            return int(months) > 0
 
-def screen():
-    get_user_input()
+        return False
+
+    def main(self):
+        user_inputs = self.get_user_inputs()
+
+        period = {
+            'start': subtract_date_by_difference(date.today(), days_by_period['month'] * user_inputs['months']).isoformat(),
+            'end': date.today().isoformat()
+        }
+
+        teams_stats_performances = teams_stats.get_teams_performance_by_map_and_period(user_inputs['map'], period)
+        teams_stats.store_teams_performance(teams_stats_performances)
+        

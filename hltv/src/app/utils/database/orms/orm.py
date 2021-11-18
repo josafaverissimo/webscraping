@@ -22,6 +22,9 @@ class Base:
 
         if team is not None:
             self.__columns = team
+            return self
+
+        return None
     
     def get_column(self, column):
         if column not in self.__columns:

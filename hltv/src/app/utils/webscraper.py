@@ -35,11 +35,15 @@ def perform_request_and_get_response(url):
     try:
         request = Request(url, headers = headers)
         response = urlopen(request)
+
+        print(f"Success to get: {url}")
     except HTTPError as e:
         print(e)
         print(f"[X] Failed to get: {url}")
     except URLError as e:
         print(e)
         print(f"[X] Failed to get: {url}")
+    except:
+        print(f'[x] failed to get: {url}')
     finally:
         return response
