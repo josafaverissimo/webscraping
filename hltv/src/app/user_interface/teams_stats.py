@@ -28,10 +28,13 @@ class TeamsStats(Boilerplate):
 
     def main(self):
         user_inputs = self.get_user_inputs()
+        today = date.today()
+        diff = days_by_period['month'] * user_inputs['months']
+        start = subtract_date_by_difference(today, diff)
 
         period = {
-            'start': subtract_date_by_difference(date.today(), days_by_period['month'] * user_inputs['months']).isoformat(),
-            'end': date.today().isoformat()
+            'start': start.isoformat(),
+            'end': today.isoformat()
         }
 
         teams_stats_performances = teams_stats.get_teams_performance_by_map_and_period(user_inputs['map'], period)
