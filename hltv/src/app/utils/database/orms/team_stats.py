@@ -69,3 +69,5 @@ class TeamStats(Base):
 
         if not result.failed():
             return result.fetchall()
+
+        return None
