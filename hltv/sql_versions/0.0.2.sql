@@ -15,6 +15,7 @@ create table events(
 
 create table matches(
   id int(11) unsigned not null primary key auto_increment,
+  hltv_id int(11) unsigned not null,
   event_id int(11) unsigned not null,
   matched_at timestamp,
   constraint matches_event_id_fk foreign key (event_id) references events(id)
