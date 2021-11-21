@@ -1,4 +1,7 @@
 from .utils.webscraper import get_page
+from .utils.database.orms.matches import Matches
+from .utils.database.orms.events import Events
+from datetime import datetime
 
 def get_match_page_by_hltv_id(hltv_id):
     base_url = 'https://www.hltv.org/matches/'
@@ -11,11 +14,9 @@ def get_match_page_by_hltv_id(hltv_id):
 
     return None
 
-def get_match_data(match_page):
+def get_match_data(match_page, hltv_id):
     if match_page is None:
         return None
-
-    match_data = {}
 
     def get_result_and_event_and_match_timestamp(match_page):
         result_and_event_html = match_page.find('div', {'class': {'standard-box', 'teamsBox'}})
@@ -143,13 +144,16 @@ def get_match_data(match_page):
                 sides_result = "".join([character.get_text() for character in sides_results_not_serialized])
                 not_overtime = sides_result.index(')')
                 sides_result = sides_result[2:not_overtime].replace(' ', '')
-                halfs = [half for half in sides_result.split(';')]
+                halfs = [half.split(':') for half in sides_result.split(';')]
+
+                LEFT_TEAM = 0
+                RIGHT_TEAM = 1
 
                 side = first_side_first_half
                 for half in halfs:
-                    left_result[result_by_side[side]] = int(half[LEFT])
+                    left_result[result_by_side[side]] = int(half[LEFT_TEAM])
                     side = toggle_side(side)
-                    right_result[result_by_side[side]] = int(half[RIGHT])
+                    right_result[result_by_side[side]] = int(half[RIGHT_TEAM])
 
                 if map_name not in maps_played_by_teams_results:
                     maps_played_by_teams_results[map_name] = {}
@@ -164,10 +168,39 @@ def get_match_data(match_page):
         }
 
     match_data = get_result_and_event_and_match_timestamp(match_page)
-
-    match_data = get_result_and_event_and_match_timestamp(match_page)
+    match_data['hltv_id'] = hltv_id
     match_data.update(get_maps_data_by_team(match_page))
+
     return match_data
 
+def store_match(match):
+    event_data = match['event']
+    eventOrm = Events()
+    eventOrm.set_columns(event_data)
+    event = eventOrm.create()
+
+    matchOrm = Matches()
+    matchOrm.set_columns({
+        'hltv_id': match['hltv_id'],
+        'event_id': event['id'],
+        'matched_at': match['matched_at']
+    })
+    match = matchOrm.create()
+
+    print(match)
+
+
+#TODO
+#make a function that pass hltv_id to get_match_page and get_match_data
+
+#HOW TODO
+'''
+    def get_match(hltv_id):
+        match_data = get_match_data(get_match_page_by_hltv_id(hltv_id))
+        match_data['hltv_id'] = hltv_id
+
+        return match_data
+'''
+
 match_page = get_match_page_by_hltv_id(2352893)
-print(get_match_data(match_page))
+store_match(get_match_data(match_page,2352893))
