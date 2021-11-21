@@ -13,6 +13,7 @@ create table maps(
 create table teams(
 	id int(11) unsigned not null primary key auto_increment,
 	name varchar(255) not null,
+    hltv_id int(11) unsigned not null,
 	created_at timestamp not null default current_timestamp
 );
 
