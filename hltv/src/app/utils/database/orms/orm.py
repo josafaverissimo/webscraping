@@ -67,7 +67,6 @@ class Base:
         finally:
             self.__sql.close_connection()
 
-
     def create(self):
         columns_to_save = self.get_columns(self.__set_columns)
 
