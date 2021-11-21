@@ -109,46 +109,61 @@ def get_match_data(match_page):
             maps = maps_played.findAll('div', {'class': 'mapholder'})
             maps_played_by_teams_results = {}
 
+            def toggle_side(side):
+                return 'ct' if side == 't' else 't'
+
             for map in maps:
+                if map.find('div', {'class': 'optional'}) is not None:
+                    continue
+
+                LEFT = 0
+                SIDES_RESULTS = 1
+                RIGHT = 2
+
                 map_name = map.find('div', {'class': 'played'}).find('div', {'class': 'mapname'}).get_text().lower()
-                results = map.find('div', {'class': {'results', 'played'}})
+                results = [sibling for sibling in map.find('div', {'class': 'results'}).contents[0].next_siblings if sibling != '\n']
+
                 left_result = {
-                    'team': results.find('div', {'class': 'results-left'}).find('div', {'class': 'results-teamname'}).get_text().lower(),
-                    'ct_rounds_wins' None,
+                    'team': results[LEFT].find('div', {'class': 'results-teamname'}).get_text().lower(),
+                    'ct_rounds_wins': None,
                     'tr_rounds_wins': None
                 }
                 right_result = {
-                    'team': results.find('div', {'class': 'results-right'}).find('div', {'class': 'results-teamname'}).get_text().lower(),
-                    'ct_rounds_wins' None,
+                    'team': results[RIGHT].find('div', {'class': 'results-teamname'}).get_text().lower(),
+                    'ct_rounds_wins': None,
                     'tr_rounds_wins': None
                 }
 
-                #TODO
-                '''
-                    get ct rounds wins and tr rounds wins in <div class="results-half-score>"
-                '''
-                #HOW TODO
-                '''
-                    get all span tags text and split by " " to valid if there was overtime
-                    if you splited string by " " and get a list lower than 2, so there was not overtime
-                    get half's sum of left side and right side, to know if is ct or tr, save <span class="ct"> and determine its side, if 1 is tr else ct
-                    go ahead!
-                '''
+                sides_results_not_serialized = results[SIDES_RESULTS].findAll('span')
+                first_side_first_half = sides_results_not_serialized[1].attrs['class'][0]
+                result_by_side = {
+                    't': 'tr_rounds_wins',
+                    'ct': 'ct_rounds_wins'
+                }
+                sides_result = "".join([character.get_text() for character in sides_results_not_serialized])
+                not_overtime = sides_result.index(')')
+                sides_result = sides_result[2:not_overtime].replace(' ', '')
+                halfs = [half for half in sides_result.split(';')]
+
+                side = first_side_first_half
+                for half in halfs:
+                    left_result[result_by_side[side]] = int(half[LEFT])
+                    side = toggle_side(side)
+                    right_result[result_by_side[side]] = int(half[RIGHT])
 
                 if map_name not in maps_played_by_teams_results:
                     maps_played_by_teams_results[map_name] = {}
 
                 maps_played_by_teams_results[map_name] = [left_result, right_result]
 
-        return get_maps_picked_and_banned_by_team(maps_voted)
+            return maps_played_by_teams_results
 
-
+        return {
+            'votation_by_team': get_maps_picked_and_banned_by_team(maps_voted),
+            'maps_played': get_maps_played(maps_played)
+        }
 
     match_data = get_result_and_event_and_match_timestamp(match_page)
-
-
-
-    get_maps_data_by_team(match_page)
 
     match_data = get_result_and_event_and_match_timestamp(match_page)
     match_data.update(get_maps_data_by_team(match_page))
