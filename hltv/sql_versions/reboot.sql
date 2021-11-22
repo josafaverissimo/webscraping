@@ -84,10 +84,13 @@ create table matches_teams_results(
 create table matches_teams_maps_results(
     id int(11) unsigned not null primary key auto_increment,
     team_id int(11) unsigned not null,
-    rounds_played int(11) unsigned not null,
+    map_id int(11) unsigned not null,
+    match_id int(11) unsigned not null,
     ct_rounds_wins int(11) unsigned not null,
     tr_rounds_wins int(11) unsigned not null,
-    constraint teams_maps_results_team_id_fk foreign key (team_id) references teams(id)
+    constraint matches_teams_maps_results_team_id_fk foreign key (team_id) references teams(id),
+    constraint matches_teams_maps_results_map_id_fk foreign key (map_id) references maps(id),
+    constraint matches_teams_maps_results_match_id_fk foreign key (match_id) references matches(id)
 );
 
 
