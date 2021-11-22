@@ -1,7 +1,7 @@
 from .orm import Base
 from datetime import datetime
 
-class Matches(Base):
+class Match(Base):
     def __init__(
         self,
         hltv_id = None,

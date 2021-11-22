@@ -1,6 +1,12 @@
 from .utils.webscraper import get_page
-from .utils.database.orms.matches import Matches
-from .utils.database.orms.events import Events
+from .utils.database.orms.event import Event
+from .utils.database.orms.match import Match
+from .utils.database.orms.match_map_picked import MatchMapPicked
+from .utils.database.orms.match_map_banned import MatchMapBanned
+from .utils.database.orms.match_team_result import MatchTeamResult
+from .utils.database.orms.team import Team
+from .utils.database.orms.map import Map
+from . import team
 from datetime import datetime
 
 def get_match(hltv_id):
@@ -180,20 +186,71 @@ def get_match(hltv_id):
     return match
 
 
+# this function must be refactored
 def store_match(match):
-    event_orm = Events()
-    event_orm.set_columns(match['event'])
-    event = event_orm.create()
+    event_orm = Event()
+    match_orm = Match()
+    match_map_picked_orm = MatchMapPicked()
+    match_map_banned_orm = MatchMapBanned()
+    match_team_result_orm = MatchTeamResult()
+    map_orm = Map()
 
-    match_orm = Matches()
+    event_orm.set_columns(match['event'])
+    event_row = event_orm.create()
+
     match_orm.set_columns({
         'hltv_id': match['hltv_id'],
-        'event_id': event['id'],
+        'event_id': event_row['id'],
         'matched_at': match['matched_at']
     })
-    match = match_orm.create()
+    match_row = match_orm.create()
 
-    print(match)
+    for team_name in match['result']:
+        team_result = match['result'][team_name]
+        team_data = team.get_team_by_name(team_name)
+        team_row = team.store_team(team_data)
+
+        match_team_result_orm.set_columns({
+            'team_id': team_row['id'],
+            'result': team_result,
+            'match_id': match_row['id']
+        })
+
+        match_team_result_orm.create()
+
+
+    for team_name in match['votation_by_team']:
+        picks = match['votation_by_team'][team_name]['picks']
+        bans = match['votation_by_team'][team_name]['bans']
+        
+        team_data = team.get_team_by_name(team_name)
+        team_row = team.store_team(team_data)
+
+        for match_map_picked in picks:
+            map_orm.set_columns({
+                'name': match_map_picked
+            })
+            map_row = map_orm.create()
+
+            match_map_picked_orm.set_columns({
+                'map_id': map_row['id'],
+                'team_id': team_row['id'],
+                'match_id': match_row['id']
+            })
+            match_map_picked_row = match_map_picked_orm.create()
+
+        for match_map_banned in bans:
+            map_orm.set_columns({
+                'name': match_map_banned
+            })
+            map_row = map_orm.create()
+
+            match_map_banned_orm.set_columns({
+                'map_id': map_row['id'],
+                'team_id': team_row['id'],
+                'match_id': match_row['id']
+            })
+            match_map_banned_row = match_map_banned_orm.create()
 
 match = get_match(2352893)
 store_match(match)

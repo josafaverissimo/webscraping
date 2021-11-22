@@ -1,6 +1,6 @@
 from .orm import Base
 
-class Events(Base):
+class Event(Base):
     def __init__(
         self,
         name = None,

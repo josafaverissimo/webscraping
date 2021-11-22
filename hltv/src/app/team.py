@@ -34,8 +34,10 @@ def store_team(team):
         return None
 
     teamOrm = Team()
-    loaded = teamOrm.load_by_column('name', team['name'])
+    loaded = teamOrm.get_by_column('name', team['name'])
 
     if loaded is None:
         teamOrm.set_columns(team)
-        teamOrm.create()
+        return teamOrm.create()
+    
+    return loaded
