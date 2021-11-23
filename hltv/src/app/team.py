@@ -1,12 +1,13 @@
 from .utils.webscraper import get_data_from_json_api
 from .utils.database.orms.team import Team
+from urllib.parse import quote
 
 def get_team_by_name(name):
     name = name.lower()
 
     def search(term):
         base_url = "https://www.hltv.org/search?term="
-        url = base_url + term
+        url = base_url + quote(term)
         response = get_data_from_json_api(url)
 
         return response

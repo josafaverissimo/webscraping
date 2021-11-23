@@ -8,6 +8,7 @@ from .utils.database.orms.team import Team
 from .utils.database.orms.map import Map
 from . import team
 from datetime import datetime
+import re
 
 def get_match(hltv_id):
     def get_match_page_by_hltv_id(hltv_id):
@@ -85,12 +86,9 @@ def get_match(hltv_id):
 
             def get_maps_picked_and_banned_by_team(maps_voted):
                 LAST = -1
+
                 maps = maps_voted.findAll('div')[:LAST]
                 maps_picked_and_banned = {}
-
-                TEAM = 1
-                PICKED_OR_BANNED = 2
-                MAP = 3
 
                 picks_and_bans_by_vote = {
                     'picked': 'picks',
@@ -98,10 +96,24 @@ def get_match(hltv_id):
                 }
 
                 for map in maps:
-                    votation = map.get_text().split(' ')
-                    team = votation[TEAM].lower()
-                    vote = votation[PICKED_OR_BANNED]
-                    map = votation[MAP].lower()
+                    print(map)
+                    votation = map.get_text()
+                    vote = None
+
+                    for vote_option in picks_and_bans_by_vote:
+                        if vote_option in votation:
+                            votation = votation.split(vote_option)
+                            team_name = votation[0][3:-1]
+                            map_name = votation[1][1:]
+                            votation = {
+                                'team': team_name,
+                                'map': map_name
+                            }
+                            vote = vote_option
+                            break
+
+                    team = votation['team'].lower()
+                    map = votation['map'].lower()
                     
                     if team not in maps_picked_and_banned:
                         maps_picked_and_banned[team] = {
@@ -188,6 +200,7 @@ def get_match(hltv_id):
 
 # this function must be refactored
 def store_match(match):
+    print(match)
     event_orm = Event()
     match_orm = Match()
     match_map_picked_orm = MatchMapPicked()
@@ -217,7 +230,6 @@ def store_match(match):
         })
 
         match_team_result_orm.create()
-
 
     for team_name in match['votation_by_team']:
         picks = match['votation_by_team'][team_name]['picks']
@@ -252,5 +264,5 @@ def store_match(match):
             })
             match_map_banned_row = match_map_banned_orm.create()
 
-match = get_match(2352893)
+match = get_match(2353230)
 store_match(match)
