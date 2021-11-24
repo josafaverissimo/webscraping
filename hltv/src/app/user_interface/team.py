@@ -1,7 +1,7 @@
-from .. import get_team
+from .. import team
 from .interface import Boilerplate
 
-class GetTeam(Boilerplate):
+class Team(Boilerplate):
     def __init__(self):
         inputs = {
             'team': {

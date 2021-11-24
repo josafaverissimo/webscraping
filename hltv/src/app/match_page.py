@@ -4,9 +4,11 @@ from .utils.database.orms.match import Match
 from .utils.database.orms.match_map_picked import MatchMapPicked
 from .utils.database.orms.match_map_banned import MatchMapBanned
 from .utils.database.orms.match_team_result import MatchTeamResult
+from .utils.database.orms.match_team_map_result import MatchTeamMapResult
 from .utils.database.orms.team import Team
 from .utils.database.orms.map import Map
-from . import team
+from .utils.helpers import is_key_and_value_in_dictonary
+from .team import get_team_by_name
 from datetime import datetime
 import re
 
@@ -96,7 +98,6 @@ def get_match(hltv_id):
                 }
 
                 for map in maps:
-                    print(map)
                     votation = map.get_text()
                     vote = None
 
@@ -186,10 +187,48 @@ def get_match(hltv_id):
                 'maps_played': get_maps_played(maps_played)
             }
 
+        def rearrange_match_data(match_data):
+            def get_teams_from_votation(votation_by_team):
+                return [team for team in votation_by_team]
+
+            def get_maps_played_and_team_result(maps_played, team_name):
+                maps_played_and_result = []
+
+                for map_name in maps_played:
+                    teams_results = maps_played[map_name]
+
+                    for team_result in teams_results:
+                        if team_result['team'] == team_name:
+                            map_played = {
+                                'name': map_name,
+                                'ct_rounds_wins': team_result['ct_rounds_wins'],
+                                'tr_rounds_wins': team_result['tr_rounds_wins']
+                            }
+
+                            maps_played_and_result.append(map_played)
+
+                            break
+
+                return maps_played_and_result
+
+
+            match = {
+                'matched_at': match_data['matched_at'],
+                'teams': {team: {} for team in get_teams_from_votation(match_data['votation_by_team'])},
+                'event': match_data['event']
+            }
+
+            for team in match['teams']:
+                match['teams'][team]['result'] = match_data['result'][team]
+                match['teams'][team]['votation'] = match_data['votation_by_team'][team]
+                match['teams'][team]['maps_played'] = get_maps_played_and_team_result(match_data['maps_played'], team)
+
+            return match
+
         match_data = get_result_and_event_and_match_timestamp(match_page)
         match_data.update(get_maps_data_by_team(match_page))
 
-        return match_data
+        return rearrange_match_data(match_data)
 
     match_page = get_match_page_by_hltv_id(hltv_id)
     match = get_match_data(match_page)
@@ -197,72 +236,120 @@ def get_match(hltv_id):
 
     return match
 
-
-# this function must be refactored
-def store_match(match):
-    print(match)
+def store_event(event):
     event_orm = Event()
-    match_orm = Match()
-    match_map_picked_orm = MatchMapPicked()
-    match_map_banned_orm = MatchMapBanned()
-    match_team_result_orm = MatchTeamResult()
-    map_orm = Map()
+    event_orm.set_columns(event)
 
-    event_orm.set_columns(match['event'])
-    event_row = event_orm.create()
+    return event_orm.create()
 
-    match_orm.set_columns({
-        'hltv_id': match['hltv_id'],
-        'event_id': event_row['id'],
-        'matched_at': match['matched_at']
-    })
-    match_row = match_orm.create()
-
-    for team_name in match['result']:
-        team_result = match['result'][team_name]
-        team_data = team.get_team_by_name(team_name)
-        team_row = team.store_team(team_data)
-
-        match_team_result_orm.set_columns({
-            'team_id': team_row['id'],
-            'result': team_result,
-            'match_id': match_row['id']
+def store_match(match, event):
+    if event is not None:
+        match_orm = Match()
+        match_orm.set_columns({
+            'hltv_id': match['hltv_id'],
+            'event_id': event['id'],
+            'matched_at': match['matched_at']
         })
 
-        match_team_result_orm.create()
+        return match_orm.create()
 
-    for team_name in match['votation_by_team']:
-        picks = match['votation_by_team'][team_name]['picks']
-        bans = match['votation_by_team'][team_name]['bans']
-        
-        team_data = team.get_team_by_name(team_name)
-        team_row = team.store_team(team_data)
+def store_teams_data(teams_data, match):
+    def store_team_result(team_id, match_id, result):
+        match_team_result_orm = MatchTeamResult()
+        match_team_result_orm.set_columns({
+            'team_id': team_id,
+            'result': result,
+            'match_id': match_id
+        })
+        return match_team_result_orm.create()
 
-        for match_map_picked in picks:
-            map_orm.set_columns({
-                'name': match_map_picked
-            })
-            map_row = map_orm.create()
-
+    def store_team_votation(team_id, match_id, votation):
+        def store_picks(map_id, team_id, match_id):
+            match_map_picked_orm = MatchMapPicked()
             match_map_picked_orm.set_columns({
-                'map_id': map_row['id'],
-                'team_id': team_row['id'],
-                'match_id': match_row['id']
+                'map_id': map_data['id'],
+                'team_id': team_id,
+                'match_id': match_id
             })
-            match_map_picked_row = match_map_picked_orm.create()
 
-        for match_map_banned in bans:
-            map_orm.set_columns({
-                'name': match_map_banned
-            })
-            map_row = map_orm.create()
+            match_map_picked_orm.create()
 
+        def store_bans(map_id, team_id, match_id):
+            match_map_banned_orm = MatchMapBanned()
             match_map_banned_orm.set_columns({
-                'map_id': map_row['id'],
-                'team_id': team_row['id'],
-                'match_id': match_row['id']
+                'map_id': map_data['id'],
+                'team_id': team_id,
+                'match_id': match_id
             })
-            match_map_banned_row = match_map_banned_orm.create()
 
-match = get_match(2353230)
-store_match(match)
+            match_map_banned_orm.create()
+
+        map_orm = Map()
+        maps_stored = list(map_orm.get_all())
+        store_vote_by_type = {
+            'picks': store_picks,
+            'bans': store_bans
+        }
+
+        for vote_type in votation:
+            maps_voted = votation[vote_type]
+            for map_name in maps_voted:
+                map_data = None
+                is_map_stored = False
+
+                for map_stored in maps_stored:
+                    is_map_stored = is_key_and_value_in_dictonary(map_stored, 'name', map_name)
+
+                    if is_map_stored:
+                        map_data = map_stored
+                        break
+
+                if not is_map_stored:
+                    map_orm.set_columns({
+                        'name': map_name
+                    })
+                    map_data = map_orm.create()
+
+                if map_data is not None:
+                    maps_stored.append(map_data)
+
+                    store_vote_by_type[vote_type](map_data['id'], team_id, match_id)
+
+    if match is not None:
+        team_orm = Team()
+        teams_stored = list(team_orm.get_all())
+
+        for team_name in teams_data:
+            team_data = None
+            is_team_stored = False
+
+            for team_stored in teams_stored:
+                is_team_stored = is_key_and_value_in_dictonary(team_stored, 'name', team_name)
+
+                if is_team_stored:
+                    team_data = team_stored
+                    break
+
+            if not is_team_stored:
+                team_searched = get_team_by_name(team_name)
+
+                if team_searched is not None:
+                    team_orm.set_columns({
+                        'name': team_name,
+                        'hltv_id': team_searched['hltv_id']
+                    })
+                    team_data = team_orm.create()
+
+            if team_data is not None:
+                teams_stored.append(team_data)
+
+                store_team_result(team_data['id'], match['id'], teams_data[team_name]['result'])
+                store_team_votation(team_data['id'], match['id'], teams_data[team_name]['votation'])
+
+def store_match_data(match):
+    event_row = store_event(match['event'])
+    match_row = store_match(match, event_row)
+    store_teams_data(match['teams'], match_row)
+
+match = get_match(2352510)
+store_match_data(match)

@@ -42,3 +42,10 @@ def has_none_value(dictonary):
             return True
 
     return False
+
+def is_key_and_value_in_dictonary(dictonary, key_to_search, value_to_search):
+    for key, value in dictonary.items():
+        if key == key_to_search and value == value_to_search:
+            return True
+
+    return False
