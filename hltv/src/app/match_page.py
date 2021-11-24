@@ -253,6 +253,12 @@ def store_match(match, event):
 
         return match_orm.create()
 
+'''
+there's duplicated code in this function
+
+in store_team_votation, store_team_map_played_and_result, i need to check
+if map is already stored in database, but i have duplicated the same code...
+'''
 def store_teams_data(teams_data, match):
     def store_team_result(team_id, match_id, result):
         match_team_result_orm = MatchTeamResult()
@@ -261,7 +267,7 @@ def store_teams_data(teams_data, match):
             'result': result,
             'match_id': match_id
         })
-        return match_team_result_orm.create()
+        match_team_result_orm.create()
 
     def store_team_votation(team_id, match_id, votation):
         def store_picks(map_id, team_id, match_id):
@@ -315,6 +321,41 @@ def store_teams_data(teams_data, match):
 
                     store_vote_by_type[vote_type](map_data['id'], team_id, match_id)
 
+    def store_team_map_played_and_result(team_id, match_id, maps_played):
+        match_team_map_result_orm = MatchTeamMapResult()
+        map_orm = Map()
+        maps_stored = list(map_orm.get_all())
+
+        for map_played in maps_played:
+            map_name = map_played['name']
+            map_data = None
+            is_map_stored = False
+
+            for map_stored in maps_stored:
+                is_map_stored = is_key_and_value_in_dictonary(map_stored, 'name', map_name)
+
+                if is_map_stored:
+                    map_data = map_stored
+                    break
+            if not is_map_stored:
+                map_orm.set_columns({
+                    'name': map_name
+                })
+                map_data = map_orm.create()
+
+            if map_data is not None:
+                maps_stored.append(map_data)
+
+                match_team_map_result_orm.set_columns({
+                    'team_id': team_id,
+                    'map_id': map_data['id'],
+                    'match_id': match_id,
+                    'ct_rounds_wins': map_played['ct_rounds_wins'],
+                    'tr_rounds_wins': map_played['tr_rounds_wins'],
+                })
+
+                match_team_map_result_orm.create()
+
     if match is not None:
         team_orm = Team()
         teams_stored = list(team_orm.get_all())
@@ -345,11 +386,12 @@ def store_teams_data(teams_data, match):
 
                 store_team_result(team_data['id'], match['id'], teams_data[team_name]['result'])
                 store_team_votation(team_data['id'], match['id'], teams_data[team_name]['votation'])
+                store_team_map_played_and_result(team_data['id'], match['id'], teams_data[team_name]['maps_played'])
 
 def store_match_data(match):
     event_row = store_event(match['event'])
     match_row = store_match(match, event_row)
     store_teams_data(match['teams'], match_row)
 
-match = get_match(2352510)
+match = get_match(2352920)
 store_match_data(match)
