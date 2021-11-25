@@ -240,7 +240,12 @@ def store_event(event):
     event_orm = Event()
     event_orm.set_columns(event)
 
-    return event_orm.create()
+    is_event_stored = event_orm.get_by_column('hltv_id', event['hltv_id']) != None
+
+    if not is_event_stored:
+        return event_orm.create()
+
+    return None
 
 def store_match(match, event):
     if event is not None:
@@ -251,7 +256,12 @@ def store_match(match, event):
             'matched_at': match['matched_at']
         })
 
-        return match_orm.create()
+        is_match_stored = match_orm.get_by_column('hltv_id', match['hltv_id']) != None
+
+        if not is_match_stored:
+            return match_orm.create()
+
+        return None
 
 '''
 there's duplicated code in this function
@@ -393,5 +403,5 @@ def store_match_data(match):
     match_row = store_match(match, event_row)
     store_teams_data(match['teams'], match_row)
 
-match = get_match(2352920)
+match = get_match(2352808)
 store_match_data(match)
