@@ -240,12 +240,12 @@ def store_event(event):
     event_orm = Event()
     event_orm.set_columns(event)
 
-    is_event_stored = event_orm.get_by_column('hltv_id', event['hltv_id']) != None
+    event_stored = event_orm.get_by_column('hltv_id', event['hltv_id'])
 
-    if not is_event_stored:
+    if event_stored is not None:
         return event_orm.create()
 
-    return None
+    return event_stored
 
 def store_match(match, event):
     if event is not None:
