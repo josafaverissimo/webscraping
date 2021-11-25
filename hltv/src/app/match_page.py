@@ -74,14 +74,15 @@ def get_match(hltv_id):
             return data
 
         def get_maps_data_by_team(match_page):
-            MAPS_PICKED = 1
-            MAPS_PLAYED = 2
 
             maps_picked_and_maps_played = []
             votation_and_maps_played = match_page.find('div', {'class': {'g-grid', 'maps'}}).find('div', {'class': {'col-6', 'col-7-small'}}).contents[0].next_siblings
             for sibling in votation_and_maps_played:
                 if sibling != '\n':
                     maps_picked_and_maps_played.append(sibling)
+
+            MAPS_PICKED = 1 if len(maps_picked_and_maps_played) == 3 else 0
+            MAPS_PLAYED = 2 if len(maps_picked_and_maps_played) == 3 else 1
 
             maps_voted = maps_picked_and_maps_played[MAPS_PICKED].find('div', {'class': 'padding'})
             maps_played = maps_picked_and_maps_played[MAPS_PLAYED]
@@ -403,5 +404,3 @@ def store_match_data(match):
     match_row = store_match(match, event_row)
     store_teams_data(match['teams'], match_row)
 
-match = get_match(2352808)
-store_match_data(match)

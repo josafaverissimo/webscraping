@@ -1,6 +1,8 @@
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError, URLError
 from bs4 import BeautifulSoup
+from time import sleep
+from random import randrange
 import json
 
 def get_page(url):
@@ -34,6 +36,9 @@ def perform_request_and_get_response(url):
 
     try:
         request = Request(url, headers = headers)
+
+        sleep(randrange(1,10))
+
         response = urlopen(request)
 
         print(f"Success to get: {url}")
