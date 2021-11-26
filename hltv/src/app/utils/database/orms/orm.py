@@ -74,7 +74,7 @@ class Base:
             columns_to_save_name = ', '.join(list(columns_to_save))
             columns_to_save_values = list(columns_to_save.values())
             params = "%s," * (len(columns_to_save) - 1) + "%s"
-            team_id = None
+            last_id = None
             query = f'insert into {self._table_name} ({columns_to_save_name}) values ({params})'
 
             
@@ -84,13 +84,13 @@ class Base:
                 result = self.__sql.execute(query, columns_to_save_values)
 
                 if not result.failed():
-                    team_id = result.last_insert_id()
+                    last_id = result.last_insert_id()
 
             finally:
                 self.__sql.close_connection()
 
-            if team_id is not None:
-                return self.get_by_column('id', team_id)
+            if last_id is not None:
+                return self.get_by_column('id', last_id)
 
         return None
 
