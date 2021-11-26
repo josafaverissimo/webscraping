@@ -45,9 +45,15 @@ def get_match(hltv_id):
                 for team in teams:
                     won = team.find('div', {'class': 'won'})
                     lost = team.find('div', {'class': 'lost'})
-                    team_name = team.find('div', {'class': 'teamName'}).get_text().lower()
+                    result = None
 
-                    teams_results[team_name] = int(won.get_text()) if won is not None else int(lost.get_text())
+                    if won is None and lost is None:
+                        result = int(team.find('div', {'class': 'tie'}).get_text())
+                    else:
+                        result = int(won.get_text()) if won is not None else int(lost.get_text())
+                    
+                    team_name = team.find('div', {'class': 'teamName'}).get_text().lower()
+                    teams_results[team_name] = result
 
                 return teams_results
 
@@ -231,7 +237,14 @@ def get_match(hltv_id):
 
         return rearrange_match_data(match_data)
 
+    def is_match_map_default(match_page):
+        return match_page.select('div.played div.mapname')[0].get_text().lower() == 'default'
+
     match_page = get_match_page_by_hltv_id(hltv_id)
+
+    if is_match_map_default(match_page):
+        return None
+
     match = get_match_data(match_page)
     match['hltv_id'] = hltv_id
 
@@ -243,7 +256,7 @@ def store_event(event):
 
     event_stored = event_orm.get_by_column('hltv_id', event['hltv_id'])
 
-    if event_stored is not None:
+    if event_stored is None:
         return event_orm.create()
 
     return event_stored
@@ -400,7 +413,10 @@ def store_teams_data(teams_data, match):
                 store_team_map_played_and_result(team_data['id'], match['id'], teams_data[team_name]['maps_played'])
 
 def store_match_data(match):
+    if match is None:
+        return None
+
     event_row = store_event(match['event'])
+
     match_row = store_match(match, event_row)
     store_teams_data(match['teams'], match_row)
-
