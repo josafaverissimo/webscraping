@@ -64,5 +64,5 @@ def store_matches(matches_hltv_ids):
         match_data = get_match(match_hltv_id)
         store_match_data(match_data)
 
-matches_hltv_ids = get_team_matches_hltv_ids(9215)
+matches_hltv_ids = get_team_matches_hltv_ids(7175)
 store_matches(matches_hltv_ids)

@@ -90,8 +90,13 @@ def get_match(hltv_id):
             MAPS_PICKED = 1 if len(maps_picked_and_maps_played) == 3 else 0
             MAPS_PLAYED = 2 if len(maps_picked_and_maps_played) == 3 else 1
 
+            if(len(maps_picked_and_maps_played) < 2):
+                print(maps_picked_and_maps_played)
+                return None
+
             maps_voted = maps_picked_and_maps_played[MAPS_PICKED].find('div', {'class': 'padding'})
             maps_played = maps_picked_and_maps_played[MAPS_PLAYED]
+
 
             def get_maps_picked_and_banned_by_team(maps_voted):
                 LAST = -1
@@ -152,6 +157,7 @@ def get_match(hltv_id):
                     map_name = map.find('div', {'class': 'played'}).find('div', {'class': 'mapname'}).get_text().lower()
 
                     if not is_map_valid(map_name):
+                        print(f'map_invalid {map_name}')
                         continue
 
                     LEFT = 0
