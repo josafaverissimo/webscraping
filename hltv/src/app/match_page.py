@@ -134,6 +134,11 @@ def get_match(hltv_id):
                 return maps_picked_and_banned
 
             def get_maps_played(maps_played):
+                def is_map_valid(map_name):
+                    invalids_map_names = ['tba', 'default']
+                    
+                    return map_name not in invalids_map_names
+
                 maps = maps_played.findAll('div', {'class': 'mapholder'})
                 maps_played_by_teams_results = {}
 
@@ -143,12 +148,17 @@ def get_match(hltv_id):
                 for map in maps:
                     if map.find('div', {'class': 'optional'}) is not None:
                         continue
+                    
+                    map_name = map.find('div', {'class': 'played'}).find('div', {'class': 'mapname'}).get_text().lower()
+
+                    if not is_map_valid(map_name):
+                        continue
 
                     LEFT = 0
                     SIDES_RESULTS = 1
                     RIGHT = 2
 
-                    map_name = map.find('div', {'class': 'played'}).find('div', {'class': 'mapname'}).get_text().lower()
+                    
                     results = [sibling for sibling in map.find('div', {'class': 'results'}).contents[0].next_siblings if sibling != '\n']
 
                     left_result = {
@@ -189,9 +199,15 @@ def get_match(hltv_id):
 
                 return maps_played_by_teams_results
 
+            votation_by_team = get_maps_picked_and_banned_by_team(maps_voted)
+            maps_played = get_maps_played(maps_played)
+
+            if not votation_by_team or not maps_played:
+                return None
+
             return {
-                'votation_by_team': get_maps_picked_and_banned_by_team(maps_voted),
-                'maps_played': get_maps_played(maps_played)
+                'votation_by_team': votation_by_team,
+                'maps_played': maps_played
             }
 
         def rearrange_match_data(match_data):
@@ -233,7 +249,16 @@ def get_match(hltv_id):
             return match
 
         match_data = get_result_and_event_and_match_timestamp(match_page)
-        match_data.update(get_maps_data_by_team(match_page))
+
+        if match_data is None:
+            return None
+
+        maps_data_by_team = get_maps_data_by_team(match_page)
+
+        if maps_data_by_team is None:
+            return None
+
+        match_data.update(maps_data_by_team)
 
         return rearrange_match_data(match_data)
 
@@ -241,12 +266,10 @@ def get_match(hltv_id):
         return match_page.select('div.played div.mapname')[0].get_text().lower() == 'default'
 
     match_page = get_match_page_by_hltv_id(hltv_id)
-
-    if is_match_map_default(match_page):
-        return None
-
     match = get_match_data(match_page)
-    match['hltv_id'] = hltv_id
+
+    if match is not None:
+        match['hltv_id'] = hltv_id
 
     return match
 
