@@ -8,6 +8,7 @@ from .utils.database.orms.match_team_map_result import MatchTeamMapResult
 from .utils.database.orms.team import Team
 from .utils.database.orms.map import Map
 from .utils.helpers import is_key_and_value_in_dictonary
+from .utils.helpers import is_all_values_none
 from .team import get_team_by_name
 from datetime import datetime
 import re
@@ -80,25 +81,49 @@ def get_match(hltv_id):
             return data
 
         def get_maps_data_by_team(match_page):
+            def get_dictonary_maps_by_metadata(maps_voted_and_maps_played_len):
+                maps_by_metadata = {
+                    'voted': None,
+                    'played': None
+                }
 
-            maps_picked_and_maps_played = []
+                if maps_voted_and_maps_played_len == 3:
+                    maps_by_metadata['voted'] = 1
+                    maps_by_metadata['played'] = 2
+                elif maps_voted_and_maps_played_len == 2:
+                    maps_by_metadata['voted'] = 0
+                    maps_by_metadata['played'] = 1
+                else:
+                    maps_by_metadata['played'] = 0
+                
+                return maps_by_metadata
+
+            maps_voted_and_maps_played = []
             votation_and_maps_played = match_page.find('div', {'class': {'g-grid', 'maps'}}).find('div', {'class': {'col-6', 'col-7-small'}}).contents[0].next_siblings
             for sibling in votation_and_maps_played:
                 if sibling != '\n':
-                    maps_picked_and_maps_played.append(sibling)
+                    maps_voted_and_maps_played.append(sibling)
 
-            MAPS_PICKED = 1 if len(maps_picked_and_maps_played) == 3 else 0
-            MAPS_PLAYED = 2 if len(maps_picked_and_maps_played) == 3 else 1
+            maps_voted_and_maps_played_len = len(maps_voted_and_maps_played)
+            maps_by_metadata = get_dictonary_maps_by_metadata(maps_voted_and_maps_played_len)
 
-            if(len(maps_picked_and_maps_played) < 2):
-                print(maps_picked_and_maps_played)
+            if is_all_values_none(maps_by_metadata):
                 return None
 
-            maps_voted = maps_picked_and_maps_played[MAPS_PICKED].find('div', {'class': 'padding'})
-            maps_played = maps_picked_and_maps_played[MAPS_PLAYED]
+            MAPS_VOTED = maps_by_metadata['voted']
+            MAPS_PLAYED = maps_by_metadata['played']
+            
+            maps_voted = None
+
+            if MAPS_VOTED is not None:
+                maps_voted = maps_voted_and_maps_played[MAPS_VOTED].find('div', {'class': 'padding'})
+
+            maps_played = maps_voted_and_maps_played[MAPS_PLAYED]
 
 
             def get_maps_picked_and_banned_by_team(maps_voted):
+                if maps_voted is None:
+                    return {}
                 LAST = -1
 
                 maps = maps_voted.findAll('div')[:LAST]
@@ -157,15 +182,18 @@ def get_match(hltv_id):
                     map_name = map.find('div', {'class': 'played'}).find('div', {'class': 'mapname'}).get_text().lower()
 
                     if not is_map_valid(map_name):
-                        print(f'map_invalid {map_name}')
                         continue
 
                     LEFT = 0
                     SIDES_RESULTS = 1
                     RIGHT = 2
 
-                    
-                    results = [sibling for sibling in map.find('div', {'class': 'results'}).contents[0].next_siblings if sibling != '\n']
+                    map_results = map.find('div', {'class': 'results'})
+
+                    if map_results is None:
+                        continue
+
+                    results = [sibling for sibling in map_results.contents[0].next_siblings if sibling != '\n']
 
                     left_result = {
                         'team': results[LEFT].find('div', {'class': 'results-teamname'}).get_text().lower(),
@@ -208,7 +236,7 @@ def get_match(hltv_id):
             votation_by_team = get_maps_picked_and_banned_by_team(maps_voted)
             maps_played = get_maps_played(maps_played)
 
-            if not votation_by_team or not maps_played:
+            if not votation_by_team and not maps_played:
                 return None
 
             return {
@@ -217,8 +245,8 @@ def get_match(hltv_id):
             }
 
         def rearrange_match_data(match_data):
-            def get_teams_from_votation(votation_by_team):
-                return [team for team in votation_by_team]
+            def get_teams_from_result(result):
+                return [team for team in result]
 
             def get_maps_played_and_team_result(maps_played, team_name):
                 maps_played_and_result = []
@@ -240,16 +268,19 @@ def get_match(hltv_id):
 
                 return maps_played_and_result
 
-
             match = {
                 'matched_at': match_data['matched_at'],
-                'teams': {team: {} for team in get_teams_from_votation(match_data['votation_by_team'])},
+                'teams': {team: {} for team in get_teams_from_result(match_data['result'])},
                 'event': match_data['event']
             }
 
+            votation = None
+            if match_data['votation_by_team']:
+                votation = match_data['votation_by_team']
+
             for team in match['teams']:
                 match['teams'][team]['result'] = match_data['result'][team]
-                match['teams'][team]['votation'] = match_data['votation_by_team'][team]
+                match['teams'][team]['votation'] = None if votation is None else votation[team]
                 match['teams'][team]['maps_played'] = get_maps_played_and_team_result(match_data['maps_played'], team)
 
             return match
@@ -323,6 +354,9 @@ def store_teams_data(teams_data, match):
         match_team_result_orm.create()
 
     def store_team_votation(team_id, match_id, votation):
+        if votation is None:
+            return None
+
         def store_picks(map_id, team_id, match_id):
             match_map_picked_orm = MatchMapPicked()
             match_map_picked_orm.set_columns({
@@ -443,6 +477,7 @@ def store_teams_data(teams_data, match):
 
 def store_match_data(match):
     if match is None:
+        print("match is none")
         return None
 
     event_row = store_event(match['event'])
