@@ -37,11 +37,18 @@ def get_team_url_page(team):
     return get_url(team)
 
 def has_none_value(dictonary):
-    for key, value in dictonary.items():
+    for value in dictonary.values():
         if value is None:
             return True
 
     return False
+
+def is_all_values_none(dictonary):
+    for value in dictonary.values():
+        if value is not None:
+            return False
+
+    return True
 
 def is_key_and_value_in_dictonary(dictonary, key_to_search, value_to_search):
     for key, value in dictonary.items():
