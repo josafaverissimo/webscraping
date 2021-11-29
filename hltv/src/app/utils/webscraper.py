@@ -37,7 +37,7 @@ def perform_request_and_get_response(url):
     try:
         request = Request(url, headers = headers)
 
-        # sleep(randrange(1,10))
+        sleep(randrange(1,10))
 
         response = urlopen(request)
 
