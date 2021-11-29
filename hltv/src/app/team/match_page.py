@@ -10,8 +10,6 @@ from .utils.database.orms.map import Map
 from .utils.helpers import is_key_and_value_in_dictonary
 from .utils.helpers import is_all_values_none
 from .team import get_team_by_name
-from datetime import datetime
-import re
 
 def get_match(hltv_id):
     def get_match_page_by_hltv_id(hltv_id):

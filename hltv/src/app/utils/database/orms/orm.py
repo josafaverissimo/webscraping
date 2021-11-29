@@ -40,11 +40,17 @@ class Base:
 
     def set_column(self, column, value):
         if(column in self.__set_columns):
-            self.__columns[column] = self.__set_columns[column](value)
+            value = self.__set_columns[column](value) if value is not None else None
+            self.__columns[column] = value
 
     def set_columns(self, columns):
         for column, value in columns.items():
             self.set_column(column, value)
+
+    def reset_columns_values(self):
+        columns = {column: None for column in self.__set_columns}
+
+        self.set_columns(columns)
 
     def get_all(self, columns_filtered = None):
         columns_filtered = "*" if columns_filtered is None else ', '.join(columns_filtered)
