@@ -13,9 +13,9 @@ from .team import Team
 from ..utils.database.orms.map import Map as MapORM
 
 class Match:
-    def __init__(self, hltv_id):
+    def __init__(self, hltv_id = None):
         self.__match_data = {
-            'hltv_id': int(hltv_id),
+            'hltv_id': int(hltv_id) if hltv_id is not None else None,
             'matched_at': None,
             'event': None,
             'results_by_team': {} 
