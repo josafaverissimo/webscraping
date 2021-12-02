@@ -9,13 +9,27 @@ class Base:
         self.__set_columns = set_columns
         self._table_name = table_name
 
-    def _query(self, query, args = None):
+    def query(self, query, args = None):
+        result = None
+        query_metadata = None
+        
         try:
             self.__sql.open_connection()
 
-            return self.__sql.execute(query, args)
+            result = self.__sql.execute(query, args)
         finally:
+            if not result.failed():
+                query_metadata = {
+                    'affected_rows': result.get_affect_rows(),
+                    'last_insert_id': result.last_insert_id()
+                }
+                result.commit()
+            else:
+                result.rollback()
+
             self.__sql.close_connection()
+
+        return query_metadata
 
     def load_by_column(self, column, value):
         team = self.get_by_column(column, value)
@@ -83,22 +97,12 @@ class Base:
             last_id = None
             query = f'insert into {self._table_name} ({columns_to_save_name}) values ({params})'
 
-            
-            try:
-                self.__sql.open_connection()
+            result = self.query(query, columns_to_save_values)
 
-                result = self.__sql.execute(query, columns_to_save_values)
+            if result is not None:
+                last_id = result['last_insert_id']
 
-                if not result.failed():
-                    last_id = result.last_insert_id()
-
-            finally:
-                self.__sql.close_connection()
-
-            if last_id is not None:
                 return self.get_by_column('id', last_id)
-
-        return None
 
     def update(self, columns = None):
         if columns is not None:
@@ -108,6 +112,7 @@ class Base:
 
         columns_values = [self.get_column(column) for column in columns]
         columns = ' = %s, '.join(columns) + ' = %s'
+        affected_rows = None
 
         if self.__columns['id'] is not None:
             query = f'''
@@ -116,15 +121,12 @@ class Base:
                 where id = {self.__columns['id']}
             '''
 
-            try:
-                self.__sql.open_connection()
+            result = self.query(query, columns_values)
 
-                result = self.__sql.execute(query, columns_values)
+            if result is not None:
+                return result['affected_rows']
 
-                if not result.failed():
-                    return result.get_affect_rows()
-            finally:
-                self.__sql.close_connection()
+            return None
 
     def delete(self):
         if self.__columns['id'] is not None:
@@ -132,12 +134,14 @@ class Base:
                 delete from {self._table_name}
                 where id = {self.__columns['id']}
             '''
-            try:
-                self.__sql.open_connection()
 
-                result = self.__sql.execute(query)
+            affected_rows = None
 
-                if not result.failed():
-                    return result.get_affect_rows()
-            finally:
-                self.__sql.close_connection()
+            result = self.query(query)
+
+            if result is not None:
+                return result['affected_rows']
+
+
+        return None
+

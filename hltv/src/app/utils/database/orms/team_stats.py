@@ -58,7 +58,7 @@ class TeamStats(Base):
         maps_table = 'maps'
         teams_table = 'teams'
 
-        result = self._query(f'''
+        result = self.query(f'''
             select t.id team_id, t.name team_name,
             concat(concat('[', group_concat(json_object("name", m.name, "id", m.id) separator ','), ']')) maps
             from {teams_table} t

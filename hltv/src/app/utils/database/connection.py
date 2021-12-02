@@ -34,10 +34,15 @@ class Sql:
         self.__error_log = None
     
     def close_connection(self):
-        self.cursor.connection.commit()
         self.cursor.close()
         self.connection.close()
-            
+
+    def commit(self):
+        self.cursor.connection.commit()
+
+    def rollback(self):
+        self.cursor.connection.rollback()
+
     def execute(self, query, args = None, callback = None):
         if args is not None:
             query = query % self._normalize_args(args)
@@ -78,7 +83,9 @@ class Sql:
             select last_insert_id() id
         '''
 
-        return self.execute(query).fetchone()['id']
+        result = self.execute(query).fetchone()
+
+        return None if result is None else result['id']
 
     def get_affect_rows(self):
         return self._affected_rows

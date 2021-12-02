@@ -4,9 +4,9 @@ from urllib.parse import quote
 from ..utils import helpers
 
 class Team:
-    def __init__(self, name):
+    def __init__(self, name = None):
         self.__team_data = {
-            'name': name.lower(),
+            'name': name.lower() if name is not None else None,
             'hltv_id': None
         }
         self.__team_orm = TeamORM()
@@ -21,7 +21,7 @@ class Team:
         return self.__team_data['name']
 
     def set_name(self, name):
-        self.__name = name.lower()
+        self.__team_data['name'] = name.lower()
 
     def get_hltv_id(self):
         return self.__team_data['hltv_id']
