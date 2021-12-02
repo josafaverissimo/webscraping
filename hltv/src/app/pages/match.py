@@ -27,10 +27,10 @@ class Match:
         match_orm.reset_columns_values()
 
         return match_orm
-    
+
     def get_hltv_id(self):
         return self.__match_data['hltv_id']
-    
+
     def set_hltv_id(self, hltv_id):
         self.__match_data['hltv_id'] = int(hltv_id)
 
