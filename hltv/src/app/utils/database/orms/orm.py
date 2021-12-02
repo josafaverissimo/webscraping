@@ -2,12 +2,17 @@ from ..connection import Sql
 from ...helpers import has_none_value
 
 class Base:
-    def __init__(self, table_name, columns, get_columns, set_columns):
+    def __init__(self, table_name, columns, get_columns, set_columns, relationships_by_table_name = None):
         self.__sql = Sql()
         self.__columns = columns
         self.__get_columns = get_columns
         self.__set_columns = set_columns
-        self._table_name = table_name
+        self.__table_name = table_name
+        self.__relationships = relationships_by_table_name
+
+    
+    def get_table_name(self):
+        return self.__table_name
 
     def query(self, query, args = None):
         result = None
@@ -72,7 +77,7 @@ class Base:
         try:
             self.__sql.open_connection()
 
-            return self.__sql.execute(f'select {columns_filtered} from {self._table_name}').fetchall()
+            return self.__sql.execute(f'select {columns_filtered} from {self.get_table_name()}').fetchall()
         finally:
             self.__sql.close_connection()
 
@@ -83,7 +88,7 @@ class Base:
             self.__sql.open_connection()
             condition = f'{column} = %s'
 
-            return self.__sql.execute(f'select {columns_filtered} from {self._table_name} where {condition}', value).fetchone()
+            return self.__sql.execute(f'select {columns_filtered} from {self.get_table_name()} where {condition}', value).fetchone()
         finally:
             self.__sql.close_connection()
 
@@ -95,7 +100,7 @@ class Base:
             columns_to_save_values = list(columns_to_save.values())
             params = "%s," * (len(columns_to_save) - 1) + "%s"
             last_id = None
-            query = f'insert into {self._table_name} ({columns_to_save_name}) values ({params})'
+            query = f'insert into {self.get_table_name()} ({columns_to_save_name}) values ({params})'
 
             result = self.query(query, columns_to_save_values)
 
@@ -116,7 +121,7 @@ class Base:
 
         if self.__columns['id'] is not None:
             query = f'''
-                update {self._table_name}
+                update {self.get_table_name()}
                 set {columns}
                 where id = {self.__columns['id']}
             '''
@@ -131,7 +136,7 @@ class Base:
     def delete(self):
         if self.__columns['id'] is not None:
             query = f'''
-                delete from {self._table_name}
+                delete from {self.get_table_name()}
                 where id = {self.__columns['id']}
             '''
 
@@ -145,3 +150,51 @@ class Base:
 
         return None
 
+    def insert_in_relationship(self, relationship, relationship_columns_to_save):
+        if self.__relationships is not None:
+            relationship = self.__relationships[relationship]
+            foreign_key = {
+                'name': relationship['foreign_key'],
+                'value': self.get_column(relationship['references_key'])
+            }
+
+            if foreign_key['value'] is not None:
+                columns_to_save = {
+                    foreign_key['name']: foreign_key['value']
+                }
+                columns_to_save.update(relationship_columns_to_save)
+
+                relationship['orm'].set_columns(columns_to_save)
+
+                result = relationship['orm'].create()
+
+                relationship['orm'].reset_columns_values()
+
+                return result
+
+        return None
+
+    def set_foreign_key_by_relationship(self, relationship, relationship_columns_to_save):
+        if self.__relationships is not None:
+            relationship = self.__relationships[relationship]
+
+            relationship['orm'].set_columns(relationship_columns_to_save)
+            relationship_data = relationship.create()
+            foreing_key = None
+
+            if relationship_data is not None:
+                foreign_key = {
+                    'name': relationship['foreing_key'],
+                    'value': relationship['orm'].get_column(relationship['references_key'])
+                }
+
+                self.set_column(foreing_key['name'], foreing_key['value'])
+
+            relationship['orm'].reset_columns_values()
+            
+            return foreign_key
+
+        return None
+
+    def get_relationship_orm(self, relationship):
+        return self.__relationships[relationship]['orm']

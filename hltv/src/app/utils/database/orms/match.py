@@ -1,4 +1,5 @@
 from .orm import Base
+from .match_team_result import MatchTeamResult
 from datetime import datetime
 
 class Match(Base):
@@ -21,8 +22,11 @@ class Match(Base):
             'event_id': int,
             'matched_at': self.set_matched_at
         }
+        relationships_by_table_name = {
+            'matches_teams_results': {'references_key': 'id', 'foreign_key': 'match_id', 'orm': MatchTeamResult()}
+        }
 
-        super().__init__(table_name, columns, get_columns, set_columns)
+        super().__init__(table_name, columns, get_columns, set_columns, relationships_by_table_name)
 
     def set_matched_at(self, timestamp):
         timestamp = int(timestamp)
