@@ -8,7 +8,7 @@ class Base:
         self.__get_columns = get_columns
         self.__set_columns = set_columns
         self.__table_name = table_name
-        self.__relationships = relationships_by_table_name
+        self.__relationships_by_table_name = relationships_by_table_name
 
     
     def get_table_name(self):
@@ -36,11 +36,14 @@ class Base:
 
         return query_metadata
 
-    def load_by_column(self, column, value):
-        team = self.get_by_column(column, value)
+    def __load(self, columns_values):
+        self.__columns = columns_values
 
-        if team is not None:
-            self.__columns = team
+    def load_by_column(self, column, value):
+        columns_values = self.get_by_column(column, value)
+
+        if columns_values is not None:
+            self.__load(columns_values)
             return self
 
         return None
@@ -107,7 +110,11 @@ class Base:
             if result is not None:
                 last_id = result['last_insert_id']
 
-                return self.get_by_column('id', last_id)
+                result = self.get_by_column('id', last_id)
+
+                self.__load(result)
+
+            return result
 
     def update(self, columns = None):
         if columns is not None:
@@ -131,7 +138,7 @@ class Base:
             if result is not None:
                 return result['affected_rows']
 
-            return None
+        return None
 
     def delete(self):
         if self.__columns['id'] is not None:
@@ -150,51 +157,51 @@ class Base:
 
         return None
 
-    def insert_in_relationship(self, relationship, relationship_columns_to_save):
-        if self.__relationships is not None:
-            relationship = self.__relationships[relationship]
-            foreign_key = {
-                'name': relationship['foreign_key'],
-                'value': self.get_column(relationship['references_key'])
-            }
-
-            if foreign_key['value'] is not None:
-                columns_to_save = {
-                    foreign_key['name']: foreign_key['value']
-                }
-                columns_to_save.update(relationship_columns_to_save)
-
-                relationship['orm'].set_columns(columns_to_save)
-
-                result = relationship['orm'].create()
-
-                relationship['orm'].reset_columns_values()
-
-                return result
+    def get_relationship(self, relationship):
+        if relationship is not None:
+            if relationship in self.__relationships_by_table_name:
+                return self.__relationships_by_table_name[relationship]
 
         return None
 
-    def set_foreign_key_by_relationship(self, relationship, relationship_columns_to_save):
-        if self.__relationships is not None:
-            relationship = self.__relationships[relationship]
+    def set_foreign_key(self, relationship_name, foreign_key):
+        if 'name' in foreign_key and 'value' in foreign_key:
+            relationship = self.get_relationship(relationship_name)
 
-            relationship['orm'].set_columns(relationship_columns_to_save)
-            relationship_data = relationship.create()
-            foreing_key = None
+            if relationship is not None:
+                if foreign_key['name'] == relationship['foreign_key']:
+                    self.set_column(foreign_key['name'], foreign_key['value'])
+                    
+        return None
+
+    def set_foreign_key_by_relationship(self, relationship_name, relationship_columns_to_save = None):
+        if self.__relationships_by_table_name is not None:
+            relationship = self.get_relationship(relationship_name)
+            relationship_data = None
+            foreign_key = None
+
+            if relationship_columns_to_save is None:
+                relationship_data = relationship['orm'].get_columns()
+            else:
+                relationship['orm'].set_columns(relationship_columns_to_save)
+                relationship_data = relationship['orm'].create()         
 
             if relationship_data is not None:
                 foreign_key = {
-                    'name': relationship['foreing_key'],
-                    'value': relationship['orm'].get_column(relationship['references_key'])
+                    'name': relationship['foreign_key'],
+                    'value': relationship_data[relationship['references_key']]
                 }
 
-                self.set_column(foreing_key['name'], foreing_key['value'])
-
-            relationship['orm'].reset_columns_values()
+                self.set_foreign_key(relationship_name, foreign_key)
             
             return foreign_key
 
         return None
 
     def get_relationship_orm(self, relationship):
-        return self.__relationships[relationship]['orm']
+        relationship = self.get_relationship(relationship)
+
+        if relationship is not None:
+            return self.get_relationship(relationship)['orm']
+
+        return None

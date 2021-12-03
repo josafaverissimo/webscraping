@@ -1,5 +1,5 @@
 from .orm import Base
-from .match_team_result import MatchTeamResult
+from .event import Event
 from datetime import datetime
 
 class Match(Base):
@@ -7,7 +7,8 @@ class Match(Base):
         self,
         hltv_id = None,
         event_id = None,
-        matched_at = None
+        matched_at = None,
+        relationships = None
     ):
         table_name = 'matches'
         columns = {
@@ -22,8 +23,19 @@ class Match(Base):
             'event_id': int,
             'matched_at': self.set_matched_at
         }
+
+        event_orm = None
+
+        if relationships is not None:
+            if 'events' in relationships:
+                event_orm = relationships['events']
+            else:
+                event_orm = Event()
+        else:
+            event_orm = Event()
+
         relationships_by_table_name = {
-            'matches_teams_results': {'references_key': 'id', 'foreign_key': 'match_id', 'orm': MatchTeamResult()}
+            'events': {'references_key': 'id', 'foreign_key': 'event_id', 'orm': event_orm}
         }
 
         super().__init__(table_name, columns, get_columns, set_columns, relationships_by_table_name)
