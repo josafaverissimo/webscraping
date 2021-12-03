@@ -24,19 +24,9 @@ class Match(Base):
             'matched_at': self.set_matched_at
         }
 
-        event_orm = None
-
-        if relationships is not None:
-            if 'events' in relationships:
-                event_orm = relationships['events']
-            else:
-                event_orm = Event()
-        else:
-            event_orm = Event()
-
-        relationships_by_table_name = {
-            'events': {'references_key': 'id', 'foreign_key': 'event_id', 'orm': event_orm}
-        }
+        relationships_by_table_name = Base.get_orms_by_relationships(relationships, {
+            'events': {'references_key': 'id', 'foreign_key': 'event_id', 'orm': Event}
+        })
 
         super().__init__(table_name, columns, get_columns, set_columns, relationships_by_table_name)
 

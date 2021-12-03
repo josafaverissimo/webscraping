@@ -10,6 +10,24 @@ class Base:
         self.__table_name = table_name
         self.__relationships_by_table_name = relationships_by_table_name
 
+    @staticmethod
+    def get_orms_by_relationships(orms_by_table_name, relationships_by_table_name):
+        if orms_by_table_name is None:
+            for relationship_name in relationships_by_table_name.copy():
+                relationship_orm = relationships_by_table_name[relationship_name]['orm']
+                relationships_by_table_name[relationship_name]['orm'] = relationship_orm()
+
+        else:
+            for relationship_name in relationships_by_table_name.copy():
+                if relationship_name in orms_by_table_name:
+                    relationship_orm = orms_by_table_name[relationship_name]
+                    relationships_by_table_name[relationship_name]['orm'] = relationship_orm
+                else:
+                    relationship_orm = relationships_by_table_name[relationship_name]['orm']
+                    relationships_by_table_name[relationship_name]['orm'] = relationship_orm()
+
+        return relationships_by_table_name
+
     
     def get_table_name(self):
         return self.__table_name
@@ -198,6 +216,14 @@ class Base:
 
         return None
 
+    def set_all_foreign_key(self):
+        foreign_keys = {}
+
+        for relationship_name in self.__relationships_by_table_name:
+            foreign_keys[relationship_name] = self.set_foreign_key_by_relationship(relationship_name)
+
+        return foreign_keys
+    
     def get_relationship_orm(self, relationship):
         relationship = self.get_relationship(relationship)
 
