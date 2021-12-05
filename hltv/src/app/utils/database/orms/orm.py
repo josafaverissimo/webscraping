@@ -1,8 +1,16 @@
 from ..connection import Sql
-from ...helpers import has_none_value
+from ... import helpers
 
-class Page:
-    def __init__(self, table_name, columns, get_columns, set_columns, relationships_by_table_name = None):
+
+class Orm:
+    def __init__(
+        self,
+        table_name,
+        columns,
+        get_columns,
+        set_columns,
+        relationships_by_table_name=None
+    ):
         self.__sql = Sql()
         self.__columns = columns
         self.__get_columns = get_columns
@@ -15,7 +23,8 @@ class Page:
         if orms_by_table_name is None:
             for relationship_name in relationships_by_table_name.copy():
                 relationship_orm = relationships_by_table_name[relationship_name]['orm']
-                relationships_by_table_name[relationship_name]['orm'] = relationship_orm()
+                relationships_by_table_name[relationship_name]['orm'] = relationship_orm(
+                )
 
         else:
             for relationship_name in relationships_by_table_name.copy():
@@ -24,18 +33,18 @@ class Page:
                     relationships_by_table_name[relationship_name]['orm'] = relationship_orm
                 else:
                     relationship_orm = relationships_by_table_name[relationship_name]['orm']
-                    relationships_by_table_name[relationship_name]['orm'] = relationship_orm()
+                    relationships_by_table_name[relationship_name]['orm'] = relationship_orm(
+                    )
 
         return relationships_by_table_name
 
-    
     def get_table_name(self):
         return self.__table_name
 
-    def query(self, query, args = None):
+    def query(self, query, args=None):
         result = None
         query_metadata = None
-        
+
         try:
             self.__sql.open_connection()
 
@@ -65,22 +74,23 @@ class Page:
             return self
 
         return None
-    
+
     def get_column(self, column):
         if column not in self.__columns:
             return None
 
         return self.__columns[column] if column not in self.__get_columns else self.__get_columns[column]()
 
-    def get_columns(self, sub_columns = None):
+    def get_columns(self, sub_columns=None):
         if sub_columns is not None:
             return {column: self.get_column(column) for column in sub_columns if column in self.__columns}
-            
+
         return {column: self.get_column(column) for column in self.__columns if column in self.__columns}
 
     def set_column(self, column, value):
         if(column in self.__set_columns):
-            value = self.__set_columns[column](value) if value is not None else None
+            value = self.__set_columns[column](
+                value) if value is not None else None
             self.__columns[column] = value
 
     def set_columns(self, columns):
@@ -92,8 +102,9 @@ class Page:
 
         self.set_columns(columns)
 
-    def get_all(self, columns_filtered = None):
-        columns_filtered = "*" if columns_filtered is None else ', '.join(columns_filtered)
+    def get_all(self, columns_filtered=None):
+        columns_filtered = "*" if columns_filtered is None else ', '.join(
+            columns_filtered)
 
         try:
             self.__sql.open_connection()
@@ -102,8 +113,9 @@ class Page:
         finally:
             self.__sql.close_connection()
 
-    def get_by_column(self, column, value, columns_filtered = None):
-        columns_filtered = "*" if columns_filtered is None else ', '.join(columns_filtered)
+    def get_by_column(self, column, value, columns_filtered=None):
+        columns_filtered = "*" if columns_filtered is None else ', '.join(
+            columns_filtered)
 
         try:
             self.__sql.open_connection()
@@ -116,7 +128,7 @@ class Page:
     def create(self):
         columns_to_save = self.get_columns(self.__set_columns)
 
-        if not has_none_value(columns_to_save):
+        if not helpers.has_none_value(columns_to_save):
             columns_to_save_name = ', '.join(list(columns_to_save))
             columns_to_save_values = list(columns_to_save.values())
             params = "%s," * (len(columns_to_save) - 1) + "%s"
@@ -134,9 +146,10 @@ class Page:
 
             return result
 
-    def update(self, columns = None):
+    def update(self, columns=None):
         if columns is not None:
-            columns = [column for column in columns if column in self.__set_columns]
+            columns = [
+                column for column in columns if column in self.__set_columns]
         else:
             columns = self.__set_columns
 
@@ -172,7 +185,6 @@ class Page:
             if result is not None:
                 return result['affected_rows']
 
-
         return None
 
     def get_relationship(self, relationship):
@@ -189,10 +201,10 @@ class Page:
             if relationship is not None:
                 if foreign_key['name'] == relationship['foreign_key']:
                     self.set_column(foreign_key['name'], foreign_key['value'])
-                    
+
         return None
 
-    def set_foreign_key_by_relationship(self, relationship_name, relationship_columns_to_save = None):
+    def set_foreign_key_by_relationship(self, relationship_name, relationship_columns_to_save=None):
         if self.__relationships_by_table_name is not None:
             relationship = self.get_relationship(relationship_name)
             relationship_data = None
@@ -202,7 +214,7 @@ class Page:
                 relationship_data = relationship['orm'].get_columns()
             else:
                 relationship['orm'].set_columns(relationship_columns_to_save)
-                relationship_data = relationship['orm'].create()         
+                relationship_data = relationship['orm'].create()
 
             if relationship_data is not None:
                 foreign_key = {
@@ -211,7 +223,7 @@ class Page:
                 }
 
                 self.set_foreign_key(relationship_name, foreign_key)
-            
+
             return foreign_key
 
         return None
@@ -220,10 +232,11 @@ class Page:
         foreign_keys = {}
 
         for relationship_name in self.__relationships_by_table_name:
-            foreign_keys[relationship_name] = self.set_foreign_key_by_relationship(relationship_name)
+            foreign_keys[relationship_name] = self.set_foreign_key_by_relationship(
+                relationship_name)
 
         return foreign_keys
-    
+
     def get_relationship_orm(self, relationship):
         relationship = self.get_relationship(relationship)
 

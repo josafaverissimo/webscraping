@@ -2,13 +2,14 @@ from .orm import Orm
 from .team import Team
 from .match import Match
 
+
 class MatchTeamResult(Orm):
     def __init__(
         self,
-        team_id = None,
-        result = None,
-        match_id = None,
-        relationships = None
+        team_id=None,
+        result=None,
+        match_id=None,
+        relationships=None
     ):
         table_name = 'matches_teams_results'
         columns = {
@@ -30,4 +31,5 @@ class MatchTeamResult(Orm):
             'matches': {'references_key': 'id', 'foreign_key': 'match_id', 'orm': Match}
         })
 
-        super().__init__(table_name, columns, get_columns, set_columns, relationships_by_table_name)
+        super().__init__(table_name, columns, get_columns,
+                         set_columns, relationships_by_table_name)

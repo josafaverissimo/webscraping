@@ -1,6 +1,7 @@
 from .db_configs import default_config
 import pymysql
 
+
 class Sql:
     def _normalize_args(self, args):
         args_normalized = []
@@ -25,14 +26,14 @@ class Sql:
 
     def open_connection(self):
         self.connection = pymysql.connect(
-            host = default_config['host'],
-            user = default_config['user'],
-            passwd = default_config['password'],
-            db = default_config['db']
+            host=default_config['host'],
+            user=default_config['user'],
+            passwd=default_config['password'],
+            db=default_config['db']
         )
-        self.cursor = self.connection.cursor(cursor = pymysql.cursors.DictCursor)
+        self.cursor = self.connection.cursor(cursor=pymysql.cursors.DictCursor)
         self.__error_log = None
-    
+
     def close_connection(self):
         self.cursor.close()
         self.connection.close()
@@ -43,21 +44,21 @@ class Sql:
     def rollback(self):
         self.cursor.connection.rollback()
 
-    def execute(self, query, args = None, callback = None):
+    def execute(self, query, args=None, callback=None):
         if args is not None:
             query = query % self._normalize_args(args)
-            
+
         self._last_query = query
 
         try:
             self._affected_rows = self.cursor.execute(query)
         except pymysql.err.MySQLError as e:
             self.__error_log = f'\n[{e.args[0]}]\n\t{e.args[1]}\n\n[Last query]\n\t{query}\n'
-            self.failed(show_log = True)
+            self.failed(show_log=True)
         finally:
             return self
-    
-    def failed(self, show_log = False):
+
+    def failed(self, show_log=False):
         if self.__error_log is None:
             return False
 

@@ -2,13 +2,14 @@ from .orm import Orm
 from .event import Event
 from datetime import datetime
 
+
 class Match(Orm):
     def __init__(
         self,
-        hltv_id = None,
-        event_id = None,
-        matched_at = None,
-        relationships = None
+        hltv_id=None,
+        event_id=None,
+        matched_at=None,
+        relationships=None
     ):
         table_name = 'matches'
         columns = {
@@ -28,7 +29,8 @@ class Match(Orm):
             'events': {'references_key': 'id', 'foreign_key': 'event_id', 'orm': Event}
         })
 
-        super().__init__(table_name, columns, get_columns, set_columns, relationships_by_table_name)
+        super().__init__(table_name, columns, get_columns,
+                         set_columns, relationships_by_table_name)
 
     def set_matched_at(self, timestamp):
         timestamp = int(timestamp)

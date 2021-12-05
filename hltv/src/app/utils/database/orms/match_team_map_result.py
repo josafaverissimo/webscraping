@@ -1,13 +1,14 @@
 from .orm import Orm
 
+
 class MatchTeamMapResult(Orm):
     def __init__(
         self,
-        team_id = None,
-        map_id = None,
-        match_id = None,
-        ct_rounds_wins = None,
-        tr_rounds_wins = None
+        team_id=None,
+        map_id=None,
+        match_id=None,
+        ct_rounds_wins=None,
+        tr_rounds_wins=None
     ):
         table_name = 'matches_teams_maps_results'
         columns = {

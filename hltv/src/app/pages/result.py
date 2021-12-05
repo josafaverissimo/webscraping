@@ -1,6 +1,7 @@
 from ..utils.requester import get_page
 from .match import Match
 
+
 class Result:
     def __init__(self, team_hltv_id):
         self.__result_data = {
@@ -19,8 +20,8 @@ class Result:
 
     def set_matches_hltv_ids(self, matches_hltv_ids):
         self.__result_data['matches_hltv_ids'] = matches_hltv_ids
-    
-    def get_team_matches_hltv_ids(self, team_hltv_id = None):
+
+    def get_team_matches_hltv_ids(self, team_hltv_id=None):
         def get_results_urls(team_hltv_id, total_matches):
             MATCH_PER_PAGE = 100
             base_url = "https://www.hltv.org/results?"
@@ -29,18 +30,21 @@ class Result:
 
             for offset in range(1, total_matches + 1):
                 matches_ordered_by_offset_in_page = offset * MATCH_PER_PAGE
-                urls.append(f"{base_url}offset={matches_ordered_by_offset_in_page}&team={team_hltv_id}")
+                urls.append(
+                    f"{base_url}offset={matches_ordered_by_offset_in_page}&team={team_hltv_id}")
 
             return urls
 
         def get_total_matches_from_result_page(result_page):
-            pagination = result_page.find('span', {'class': 'pagination-data'}).get_text()
+            pagination = result_page.find(
+                'span', {'class': 'pagination-data'}).get_text()
             total_matches = int(pagination.split('of')[1].lstrip())
 
             return total_matches
 
         def get_matches_hltv_ids_from_result_page(result_page):
-            results_sublist = result_page.find_all('div', {'class': 'results-sublist'})
+            results_sublist = result_page.find_all(
+                'div', {'class': 'results-sublist'})
             matches_hltv_ids = []
 
             for day_results in results_sublist:
@@ -65,7 +69,7 @@ class Result:
         result_page = result_page.find('div', {'class': 'results'})
         total_matches = get_total_matches_from_result_page(result_page)
         urls = get_results_urls(team_hltv_id, total_matches)
-        
+
         for match_hltv_id in get_matches_hltv_ids_from_result_page(result_page):
             matches_hltv_ids.append(match_hltv_id)
 
@@ -80,7 +84,7 @@ class Result:
 
         return matches_hltv_ids
 
-    def load_team_matches_hltv_ids(self, team_hltv_id = None):
+    def load_team_matches_hltv_ids(self, team_hltv_id=None):
         matches_hltv_ids = self.get_team_matches_hltv_ids(team_hltv_id)
         self.set_matches_hltv_ids(matches_hltv_ids)
 

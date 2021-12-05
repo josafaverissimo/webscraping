@@ -2,15 +2,16 @@ from .orm import Orm
 from .team import Team
 from .map import Map
 
+
 class TeamStats(Orm):
     def __init__(
         self,
-        team_id = None,
-        map_id = None,
-        times_played = None,
-        ct_rate_win = None,
-        tr_rate_win = None,
-        both_rate_win = None
+        team_id=None,
+        map_id=None,
+        times_played=None,
+        ct_rate_win=None,
+        tr_rate_win=None,
+        both_rate_win=None
     ):
         table_name = 'teams_stats'
         columns = {

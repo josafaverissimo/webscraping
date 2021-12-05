@@ -1,7 +1,8 @@
 from .orm import Orm
 
+
 class MatchMapPicked(Orm):
-    def __init__(self, map_id = None, team_id = None, match_id = None):
+    def __init__(self, map_id=None, team_id=None, match_id=None):
         table_name = 'matches_maps_picked'
         columns = {
             'id': None,

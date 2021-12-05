@@ -1,10 +1,11 @@
 from .orm import Orm
 
+
 class Event(Orm):
     def __init__(
         self,
-        name = None,
-        hltv_id = None
+        name=None,
+        hltv_id=None
     ):
         table_name = 'events'
         columns = {
@@ -19,5 +20,3 @@ class Event(Orm):
         }
 
         super().__init__(table_name, columns, get_columns, set_columns)
-
-    

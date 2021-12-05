@@ -1,7 +1,8 @@
 from .orm import Orm
 
+
 class Map(Orm):
-    def __init__(self, name = None):
+    def __init__(self, name=None):
         table_name = 'maps'
         columns = {
             'id': None,
