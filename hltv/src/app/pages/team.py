@@ -1,4 +1,4 @@
-from ..utils.webscraper import get_data_from_json_api
+from ..utils.requester import get_data_from_json_api
 from ..utils.database.orms.team import Team as TeamORM
 from urllib.parse import quote
 from ..utils import helpers

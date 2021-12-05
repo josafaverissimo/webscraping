@@ -1,8 +1,8 @@
-from .orm import Base
+from .orm import Orm
 from .team import Team
 from .map import Map
 
-class TeamStats(Base):
+class TeamStats(Orm):
     def __init__(
         self,
         team_id = None,

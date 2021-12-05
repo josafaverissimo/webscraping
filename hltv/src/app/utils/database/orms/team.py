@@ -1,6 +1,6 @@
-from .orm import Base
+from .orm import Orm
 
-class Team(Base):
+class Team(Orm):
     def __init__(self, name = None, hltv_id = None):
         table_name = 'teams'
         columns = {

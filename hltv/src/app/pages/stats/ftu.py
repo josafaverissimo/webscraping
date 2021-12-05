@@ -1,4 +1,4 @@
-from ...utils.webscraper import get_page
+from ...utils.requester import get_page
 from ...utils.helpers import subtract_date_by_difference, days_by_period
 from ...utils.database.orms.team import Team as TeamORM
 from ...utils.database.orms.map import Map as MapORM

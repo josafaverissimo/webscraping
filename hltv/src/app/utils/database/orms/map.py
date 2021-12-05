@@ -1,6 +1,6 @@
-from .orm import Base
+from .orm import Orm
 
-class Map(Base):
+class Map(Orm):
     def __init__(self, name = None):
         table_name = 'maps'
         columns = {

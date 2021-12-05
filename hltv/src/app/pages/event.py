@@ -1,28 +1,26 @@
-class Event:
-    def __init__(self, name, hltv_id):
-        self.__event_data = {
-            'name': name,
-            'hltv_id': int(hltv_id)
+from .page import Page
+
+class Event(Page):
+    def __init__(self, hltv_id = None):
+        base_url = 'https://www.hltv.org/events'
+        
+        searchable_data = {
+            'hltv_id': {
+                'value': hltv_id,
+                'get': self.__get_by_hltv_id
+                'set': int
+            }
         }
 
-    def get_name(self):
-        return self.__event_data['name']
+        super().__init__(base_url, searchable_data)
 
-    def set_name(self, name):
-        self.__event_data['name'] = name
+    def __get_by_hltv_id(self, hltv_id = None):
+        if hltv_id is not None:
+            self._set_searchable_value('hltv_id', hltv_id)
 
-    def get_hltv_id(self):
-        return self.__event_data['hltv_id']
+        hltv_id = self.get_searchable_value('hltv_id')
 
-    def set_hltv_id(self, hltv_id):
-        self.__event_data['hltv_id'] = int(hltv_id)
+        page = self.get_html()
 
-    def load_by_event_data(self, event_data):
-        if event_data is None:
-            return None
+        return page
 
-        self.set_name(event_data['name'])
-        self.set_hltv_id(event_data['hltv_id'])
-    
-    def get_event_data(self):
-        return self.__event_data

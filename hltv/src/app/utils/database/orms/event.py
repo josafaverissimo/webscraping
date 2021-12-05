@@ -1,6 +1,6 @@
-from .orm import Base
+from .orm import Orm
 
-class Event(Base):
+class Event(Orm):
     def __init__(
         self,
         name = None,

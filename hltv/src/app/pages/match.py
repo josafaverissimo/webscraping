@@ -1,7 +1,6 @@
-from ..utils.webscraper import get_page
+from ..utils.requester import get_page
 from ..utils.helpers import is_all_values_none
 from ..utils.helpers import is_key_and_value_in_dictonary
-from ..event.event import Event
 from ..utils.database.orms.event import Event as EventORM
 from ..utils.database.orms.match import Match as MatchORM
 from ..utils.database.orms.team import Team as TeamORM
@@ -9,8 +8,9 @@ from ..utils.database.orms.match_team_result import MatchTeamResult as MatchTeam
 from ..utils.database.orms.match_team_map_result import MatchTeamMapResult as MatchTeamMapResultORM
 from ..utils.database.orms.match_map_picked import MatchMapPicked as MatchMapPickedORM
 from ..utils.database.orms.match_map_banned import MatchMapBanned as MatchMapBannedORM
-from .team import Team
 from ..utils.database.orms.map import Map as MapORM
+from .event import Event
+from .team import Team
 
 class Match:
     def __init__(self, hltv_id = None):

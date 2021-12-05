@@ -1,4 +1,4 @@
-from ..utils.webscraper import get_page
+from ..utils.requester import get_page
 from .match import Match
 
 class Result:

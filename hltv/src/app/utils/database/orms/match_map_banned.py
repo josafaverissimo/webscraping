@@ -1,9 +1,9 @@
-from .orm import Base
+from .orm import Orm
 from .map import Map
 from .team import Team
 from .match import Match
 
-class MatchMapBanned(Base):
+class MatchMapBanned(Orm):
     def __init__(
         self,
         map_id = None,
@@ -26,7 +26,7 @@ class MatchMapBanned(Base):
             'match_id': int,
         }
         
-        relationships_by_table_name = Base.get_orms_by_relationships(relationships, {
+        relationships_by_table_name = Orm.get_orms_by_relationships(relationships, {
             'maps': {'references_key': 'id', 'foreign_key': 'map_id', 'orm': Map},
             'teams': {'references_key': 'id', 'foreign_key': 'team_id', 'orm': Team},
             'matches': {'references_key': 'id', 'foreign_key': 'match_id', 'orm': Match}

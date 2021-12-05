@@ -1,8 +1,8 @@
-from .orm import Base
+from .orm import Orm
 from .team import Team
 from .match import Match
 
-class MatchTeamResult(Base):
+class MatchTeamResult(Orm):
     def __init__(
         self,
         team_id = None,
@@ -25,7 +25,7 @@ class MatchTeamResult(Base):
             'match_id': int,
         }
 
-        relationships_by_table_name = Base.get_orms_by_relationships(relationships, {
+        relationships_by_table_name = Orm.get_orms_by_relationships(relationships, {
             'teams': {'references_key': 'id', 'foreign_key': 'team_id', 'orm': Team},
             'matches': {'references_key': 'id', 'foreign_key': 'match_id', 'orm': Match}
         })

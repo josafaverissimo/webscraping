@@ -1,8 +1,8 @@
-from .orm import Base
+from .orm import Orm
 from .event import Event
 from datetime import datetime
 
-class Match(Base):
+class Match(Orm):
     def __init__(
         self,
         hltv_id = None,
@@ -24,7 +24,7 @@ class Match(Base):
             'matched_at': self.set_matched_at
         }
 
-        relationships_by_table_name = Base.get_orms_by_relationships(relationships, {
+        relationships_by_table_name = Orm.get_orms_by_relationships(relationships, {
             'events': {'references_key': 'id', 'foreign_key': 'event_id', 'orm': Event}
         })
 

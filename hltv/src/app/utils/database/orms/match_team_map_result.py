@@ -1,6 +1,6 @@
-from .orm import Base
+from .orm import Orm
 
-class MatchTeamMapResult(Base):
+class MatchTeamMapResult(Orm):
     def __init__(
         self,
         team_id = None,

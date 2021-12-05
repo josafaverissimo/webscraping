@@ -1,7 +1,7 @@
 from ..connection import Sql
 from ...helpers import has_none_value
 
-class Base:
+class Page:
     def __init__(self, table_name, columns, get_columns, set_columns, relationships_by_table_name = None):
         self.__sql = Sql()
         self.__columns = columns
