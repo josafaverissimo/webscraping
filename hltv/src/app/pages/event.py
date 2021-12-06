@@ -35,18 +35,17 @@ class Event(Page):
 
         return int(hltv_id)
 
-    def set_page_data_by(self, searchable_data_name, searchable_data_value=None):
-        page = self.get_page_by_searchable_data(
-            searchable_data_name, searchable_data_value)
+    def get_page_data_from_page(self, page):
+        page = page.find('div', {'class': 'event-page'})
         page_data = {}
 
         if page is not None:
-            page = page.find('div', {'class': 'event-page'})
-
             page_data['name'] = self.get_event_name(page)
             page_data['hltv_id'] = self.get_event_hltv_id(page)
 
-            self._set_page_data(page_data)
+            return page_data
+
+        return None
 
     def store(self):
         page_data = self.get_page_data()
