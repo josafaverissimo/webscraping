@@ -214,6 +214,8 @@ class Orm:
                 relationship_data = relationship['orm'].get_columns()
             else:
                 relationship['orm'].set_columns(relationship_columns_to_save)
+
+            if relationship['orm'].get_column(relationship['references_key']) is None:
                 relationship_data = relationship['orm'].create()
 
             if relationship_data is not None:
