@@ -45,7 +45,7 @@ class Page:
 
         return url != self.__current_url
 
-    def _get_orm(self):
+    def get_orm(self):
         self.__orm.reset_columns_values()
 
         return self.__orm
@@ -58,6 +58,7 @@ class Page:
             return None
 
         page_data = self.get_page_data_from_page(page)
+        self.get_orm().set_columns(page_data)
         self._set_page_data(page_data)
 
         return page_data
