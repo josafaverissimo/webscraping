@@ -1,0 +1,1 @@
+alter table teams add column world_ranking int(11) unsigned not null after hltv_id;
