@@ -1,67 +1,89 @@
-from ..utils.requester import get_page
-from ..utils.helpers import is_all_values_none
-from ..utils.helpers import is_key_and_value_in_dictonary
-from ..utils.database.orms.event import Event as EventORM
-from ..utils.database.orms.match import Match as MatchORM
-from ..utils.database.orms.team import Team as TeamORM
-from ..utils.database.orms.match_team_result import MatchTeamResult as MatchTeamResultORM
-from ..utils.database.orms.match_team_map_result import MatchTeamMapResult as MatchTeamMapResultORM
-from ..utils.database.orms.match_map_picked import MatchMapPicked as MatchMapPickedORM
-from ..utils.database.orms.match_map_banned import MatchMapBanned as MatchMapBannedORM
-from ..utils.database.orms.map import Map as MapORM
 from .event import Event
 from .team import Team
+from .page import Page
+from ..utils import helpers
+from ..utils.database.orms.match import Match as MatchORM
 
 
-class Match:
+class Match(Page):
     def __init__(self, hltv_id=None):
-        self.__match_data = {
-            'hltv_id': int(hltv_id) if hltv_id is not None else None,
-            'matched_at': None,
-            'event': None,
-            'results_by_team': {}
+        base_url = 'https://www.hltv.org/matches'
+        searchable_data = {
+            'hltv_id': {
+                'value': hltv_id,
+                'get_partial_uri': self.__get_partial_uri_by_hltv_id,
+                'set_value': int
+            }
         }
-        self.__match_orm = MatchORM()
+        self.__event_page = Event()
+        orm = MatchORM(relationships={
+            "events": self.__event_page.get_orm()
+        })
 
-    def get_orm(self):
-        match_orm = self.__match_orm
-        match_orm.reset_columns_values()
+        super().__init__(base_url, searchable_data, orm)
 
-        return match_orm
+    def __get_partial_uri_by_hltv_id(self, hltv_id):
+        return f"{hltv_id}/match"
 
-    def get_hltv_id(self):
-        return self.__match_data['hltv_id']
+    def __get_match_result_from_page(self, page):
+        wrapper = page.find('div', {'class': {'standard-box', 'teamsBox'}})
+        teams = wrapper.findAll('div', {'class': 'team'})
+        result_by_team = {}
 
-    def set_hltv_id(self, hltv_id):
-        self.__match_data['hltv_id'] = int(hltv_id)
+        for team in teams:
+            won = team.find('div', {'class': 'won'})
+            lost = team.find('div', {'class': 'lost'})
+            result = None
 
-    def get_matched_at(self):
-        return self.__match_data['matched_at']
+            if won is None and lost is None:
+                result = team.find('div', {'class': 'tie'}).get_text()
+            else:
+                result = won.get_text() if won is not None else lost.get_text()
 
-    def set_matched_at(self, matched_at):
-        self.__match_data['matched_at'] = int(matched_at)
+            team_name = team.find(
+                'div', {'class': 'teamName'}
+            ).get_text().lower()
 
-    def get_event(self):
-        return self.__match_data['event']
+            result_by_team[team_name] = int(result)
 
-    def get_results_by_team(self):
-        return self.__match_data['teams']
+        return result_by_team
 
-    def set_results_by_team(self, team_match_data):
-        self.__match_data['results_by_team'] = team_match_data
+    def __set_match_event_from_page(self, page):
+        wrapper = page.find('div', {'class': {'standard-box', 'teamsBox'}})
+        event_wrapper = wrapper.find('div', {'class', 'timeAndEvent'})
+        event_partial_link = event_wrapper.select_one(
+            '.event.text-ellipsis'
+        ).find('a').attrs['href']
+        event_hltv_id = event_partial_link.split('/')[2]
+        self.__event_page.set_searchable_data('hltv_id', event_hltv_id)
+        self.__event_page.load_page_data_by('hltv_id')
+
+    def __get_match_timestamp_from_page(self, page):
+        wrapper = page.find('div', {'class': {'standard-box', 'teamsBox'}})
+        timestamp_wrapper = wrapper.find('div', {'class', 'timeAndEvent'})
+
+        timestamp = int(timestamp_wrapper.find(
+            'div', {'class': 'time'}
+        ).attrs['data-unix']) / 1000
+
+        return timestamp
+
+    def get_page_data_from_page(self, page):
+        page = page.find('div', {'class': 'contentCol'})
+        page_data = {}
+
+        if page is not None:
+            self.__set_match_event_from_page(page)
+
+            page_data['results'] = self.__get_match_result_from_page(page)
+            page_data['matched_at'] = self.__get_match_timestamp_from_page(
+                page)
+
+            return page_data
+
+        return None
 
     def search_match_by_hltv_id(self, hltv_id=None):
-        def get_match_page_by_hltv_id(hltv_id):
-            base_url = 'https://www.hltv.org/matches/'
-            url = f'{base_url}{hltv_id}/match'
-
-            match_page = get_page(url)
-
-            if match_page is not None:
-                return match_page.find('div', {'class': 'contentCol'})
-
-            return None
-
         def get_match_data(match_page):
             if match_page is None:
                 return None
@@ -279,7 +301,7 @@ class Match:
                 maps_by_metadata = get_dictonary_maps_by_metadata(
                     maps_voted_and_maps_played_len)
 
-                if is_all_values_none(maps_by_metadata):
+                if helpers.is_all_values_none(maps_by_metadata):
                     return None
 
                 MAPS_VOTED = maps_by_metadata['voted']
@@ -370,22 +392,9 @@ class Match:
 
         return match
 
-    def load_by_match_data(self, match_data):
-        if match_data is None:
-            return None
-
-        self.set_hltv_id(match_data['hltv_id']),
-        self.set_matched_at(match_data['matched_at'])
-        self.__match_data['event'] = Event(
-            match_data['event']['name'], match_data['event']['hltv_id'])
-        self.set_results_by_team(match_data['results_by_team'])
-
     def load_match_by_hltv_id(self, hltv_id=None):
         match_data = self.search_match_by_hltv_id(hltv_id)
         self.load_by_match_data(match_data)
-
-    def get_match_data(self):
-        return self.__match_data
 
     def store(self):
         def store_event(event):
@@ -471,7 +480,7 @@ class Match:
                         is_map_stored = False
 
                         for map_stored in maps_stored:
-                            is_map_stored = is_key_and_value_in_dictonary(
+                            is_map_stored = helpers.is_key_and_value_in_dictonary(
                                 map_stored, 'name', map_name)
 
                             if is_map_stored:
@@ -501,7 +510,7 @@ class Match:
                     is_map_stored = False
 
                     for map_stored in maps_stored:
-                        is_map_stored = is_key_and_value_in_dictonary(
+                        is_map_stored = helpers.is_key_and_value_in_dictonary(
                             map_stored, 'name', map_name)
 
                         if is_map_stored:
@@ -537,7 +546,7 @@ class Match:
                 is_team_stored = False
 
                 for team_stored in teams_stored:
-                    is_team_stored = is_key_and_value_in_dictonary(
+                    is_team_stored = helpers.is_key_and_value_in_dictonary(
                         team_stored, 'name', team_name)
 
                     if is_team_stored:
