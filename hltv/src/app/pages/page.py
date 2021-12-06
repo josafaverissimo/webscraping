@@ -37,7 +37,8 @@ class Page:
         self.__html = html
 
     def __set_partial_uri(self, uri):
-        self.__url = self.get_base_url() + "/" + uri
+        if uri is not None:
+            self.__url = self.get_base_url() + "/" + uri
 
     def __was_url_changed(self):
         url = self.get_url()
@@ -49,16 +50,28 @@ class Page:
 
         return self.__orm
 
+    def load_page_data_by(self, searchable_data_name, searchable_data_value=None):
+        page = self.get_page_by_searchable_data(
+            searchable_data_name, searchable_data_value)
+
+        if page is None:
+            return None
+
+        page_data = self.get_page_data_from_page(page)
+        self._set_page_data(page_data)
+
+        return page_data
+
     def _set_page_data(self, page_data):
         self.__page_data = page_data
 
     def set_searchable_data(self, name, value=None):
         if name in self.__searchable_data:
-            gettable = self.__searchable_data[name]
-            gettable_value = gettable['set_value'](
+            searchable_data = self.__searchable_data[name]
+            searchable_data_value = searchable_data['set_value'](
                 value) if value is not None else None
 
-            self.__searchable_data[name]['value'] = gettable_value
+            self.__searchable_data[name]['value'] = searchable_data_value
 
     def get_searchable_data(self, searchable_data_name):
         if searchable_data_name in self.__searchable_data:

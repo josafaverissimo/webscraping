@@ -1,87 +1,104 @@
-from ..utils.requester import get_data_from_json_api
+from .page import Page
+from ..utils import requester
 from ..utils.database.orms.team import Team as TeamORM
-from urllib.parse import quote
 from ..utils import helpers
+from urllib import parse
 
-class Team:
-    def __init__(self, name = None):
-        self.__team_data = {
-            'name': name.lower() if name is not None else None,
-            'hltv_id': None
+
+class Team(Page):
+    def __init__(self, team_name=None):
+        self.__team_data_response = None
+        self.__api_base_url = "https://www.hltv.org/search"
+        self.__team_data = None
+
+        base_url = 'https://www.hltv.org/team'
+        searchable_data = {
+            'team_name': {
+                'value': team_name,
+                'get_partial_uri': self.__get_partial_uri_by_team_name,
+                'set_value': self.__set_team_name
+            }
         }
-        self.__team_orm = TeamORM()
+        orm = TeamORM()
 
-    def get_orm(self):
-        team_orm = self.__team_orm
-        team_orm.reset_columns_values()
+        super().__init__(base_url, searchable_data, orm)
 
-        return team_orm
+    def __set_team_name(self, team_name):
+        return str(team_name).lower()
 
-    def get_name(self):
-        return self.__team_data['name']
+    def __get_partial_uri_by_team_name(self, team_name):
+        team_data = self.__load_team_data_by_name(team_name)
 
-    def set_name(self, name):
-        self.__team_data['name'] = name.lower()
-
-    def get_hltv_id(self):
-        return self.__team_data['hltv_id']
-
-    def set_hltv_id(self, hltv_id):
-        self.__team_data['hltv_id'] = int(hltv_id)
-
-    def get_team_data(self):
-        return self.__team_data
-
-    def load_by_team_data(self, team_data):
         if team_data is None:
             return None
 
-        self.set_name(team_data['name'])
-        self.set_hltv_id(team_data['hltv_id'])
+        hltv_id = team_data['hltv_id']
+        return f"{hltv_id}/team"
 
-    def search_team_by_name(self, name = None):
-        def search(term):
-            base_url = "https://www.hltv.org/search?term="
-            url = base_url + quote(term)
-            response = get_data_from_json_api(url)
+    def __get_team_data_by_name(self):
+        team_name = self.get_searchable_data('team_name')
 
-            return response
+        response = self.__team_data_response
 
-        def get_team(name):
-            teams = search(name)
-            
-            if teams is not None:
-                teams = teams[0]['teams']
-                for team in teams:
-                    team_name = team['name'].lower()
+        if response is not None:
+            teams = response[0]['teams']
 
-                    if team_name == name:
-                        return {
-                            'name': team_name,
-                            'hltv_id': team['id']
-                        }
+            for team in teams:
+                if team_name == team['name'].lower():
+                    team_data = {
+                        'name': team_name,
+                        'hltv_id': team['id']
+                    }
 
+                    return team_data
+
+        return None
+
+    def __set_team_data_response_by_name(self):
+        team_name = self.get_searchable_data('team_name')
+
+        if team_name is None:
             return None
 
-        name = name if name is not None else self.get_name()
-        team_data = get_team(name)
+        team_name = parse.quote(team_name)
 
-        return team_data
+        url = f"{self.__api_base_url}?term={team_name}"
 
-    def load_team_by_name(self, name = None):
-        team_data = self.search_team_by_name(name)
-        self.load_by_team_data(team_data)
+        self.__team_data_response = requester.get_data_from_json_api(url)
+
+    def __load_team_data_by_name(self, team_name=None):
+        if team_name is not None:
+            self.set_searchable_data('team_name', team_name)
+
+        self.__set_team_data_response_by_name()
+
+        self.__team_data = self.__get_team_data_by_name()
+
+        return self.__team_data
+
+    def get_world_ranking(self, page):
+        wrapper = page.find('div', {'class': 'profile-team-stat'})
+        world_ranking = int(wrapper.find('a').get_text().replace('#', ''))
+
+        return world_ranking
+
+    def get_page_data_from_page(self, page):
+        page = page.find('div', {'class': 'contentCol'})
+        page_data = {}
+
+        if page is not None:
+            page_data['name'] = self.__team_data['name']
+            page_data['hltv_id'] = self.__team_data['hltv_id']
+            page_data['world_ranking'] = self.get_world_ranking(page)
+
+            return page_data
+
+        return None
 
     def store(self):
-        team_data = self.get_team_data()
-        if helpers.has_none_value(team_data):
-            return None
+        page_data = self.get_page_data()
+        team_orm = self._get_orm()
 
-        team_orm = self.get_orm()
-        loaded = team_orm.get_by_column('name', team_data['name'])
-
-        if loaded is None:
-            team_orm.set_columns(team_data)
+        if page_data is not None:
+            team_orm.set_columns(page_data)
             return team_orm.create()
-        
-        return loaded
