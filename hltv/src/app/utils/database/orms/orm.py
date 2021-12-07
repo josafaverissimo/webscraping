@@ -114,16 +114,21 @@ class Orm:
             self.__sql.close_connection()
 
     def get_by_column(self, column, value, columns_filtered=None):
-        columns_filtered = "*" if columns_filtered is None else ', '.join(
-            columns_filtered)
+        columns_filtered = "*" if columns_filtered is None else ', '.join(columns_filtered)
+        result = None
 
         try:
             self.__sql.open_connection()
             condition = f'{column} = %s'
 
-            return self.__sql.execute(f'select {columns_filtered} from {self.get_table_name()} where {condition}', value).fetchone()
+            result = self.__sql.execute(
+                f'select {columns_filtered} from {self.get_table_name()} where {condition}',
+                value
+            ).fetchone()
         finally:
             self.__sql.close_connection()
+
+        return result
 
     def create(self):
         columns_to_save = self.get_columns(self.__set_columns)
@@ -187,10 +192,10 @@ class Orm:
 
         return None
 
-    def get_relationship(self, relationship):
-        if relationship is not None:
-            if relationship in self.__relationships_by_table_name:
-                return self.__relationships_by_table_name[relationship]
+    def get_relationship(self, relationship_name):
+        if relationship_name is not None:
+            if relationship_name in self.__relationships_by_table_name:
+                return self.__relationships_by_table_name[relationship_name]
 
         return None
 
@@ -239,10 +244,10 @@ class Orm:
 
         return foreign_keys
 
-    def get_relationship_orm(self, relationship):
-        relationship = self.get_relationship(relationship)
+    def get_relationship_orm(self, relationship_name):
+        relationship = self.get_relationship(relationship_name)
 
         if relationship is not None:
-            return self.get_relationship(relationship)['orm']
+            return relationship['orm']
 
         return None
