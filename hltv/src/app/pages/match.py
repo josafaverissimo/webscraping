@@ -2,6 +2,7 @@ from .event import Event
 from .team import Team
 from .page import Page
 from ..utils import helpers
+from ..utils.database.orms.orm import Orm
 from ..utils.database.orms.match import Match as MatchORM
 
 
@@ -25,7 +26,34 @@ class Match(Page):
     def __get_partial_uri_by_hltv_id(self, hltv_id):
         return f"{hltv_id}/match"
 
-    def __get_match_result_from_page(self, page):
+    def __set_match_event_from_page(self, page):
+        wrapper = page.find('div', {'class': {'standard-box', 'teamsBox'}})
+        event_wrapper = wrapper.find('div', {'class', 'timeAndEvent'})
+        event_partial_link = event_wrapper.select_one('.event.text-ellipsis').find('a').attrs['href']
+        event_hltv_id = event_partial_link.split('/')[2]
+        self.__event_page.set_searchable_data('hltv_id', event_hltv_id)
+        self.__event_page.load_page_data_by('hltv_id')
+
+    def __get_map_metadata_index(self, metadata, maps_metadata):
+        maps_by_metadata = {
+            'votation': None,
+            'played': None
+        }
+
+        maps_mentadata_len = len(maps_metadata)
+
+        if maps_mentadata_len == 3:
+            maps_by_metadata['votation'] = 1
+            maps_by_metadata['played'] = 2
+        elif maps_mentadata_len == 2:
+            maps_by_metadata['votation'] = 0
+            maps_by_metadata['played'] = 1
+        else:
+            maps_by_metadata['played'] = 0
+
+        return maps_by_metadata[metadata]
+
+    def get_match_result_from_page(self, page):
         wrapper = page.find('div', {'class': {'standard-box', 'teamsBox'}})
         teams = wrapper.findAll('div', {'class': 'team'})
         result_by_team = {}
@@ -48,17 +76,7 @@ class Match(Page):
 
         return result_by_team
 
-    def __set_match_event_from_page(self, page):
-        wrapper = page.find('div', {'class': {'standard-box', 'teamsBox'}})
-        event_wrapper = wrapper.find('div', {'class', 'timeAndEvent'})
-        event_partial_link = event_wrapper.select_one(
-            '.event.text-ellipsis'
-        ).find('a').attrs['href']
-        event_hltv_id = event_partial_link.split('/')[2]
-        self.__event_page.set_searchable_data('hltv_id', event_hltv_id)
-        self.__event_page.load_page_data_by('hltv_id')
-
-    def __get_match_timestamp_from_page(self, page):
+    def get_match_timestamp_from_page(self, page):
         wrapper = page.find('div', {'class': {'standard-box', 'teamsBox'}})
         timestamp_wrapper = wrapper.find('div', {'class', 'timeAndEvent'})
 
@@ -68,6 +86,64 @@ class Match(Page):
 
         return timestamp
 
+    def get_event_id_from_event(self):
+        event_data = self.__event_page.get_page_data()
+        match_orm: Orm = self.get_orm()
+        event_orm: Orm = match_orm.get_relationship_orm('events')
+
+        event_stored = event_orm.load_by_column('hltv_id', event_data['hltv_id'])
+
+        if event_stored is None:
+            match_orm.set_foreign_key_by_relationship('events')
+
+        return event_orm.get_column('id')
+
+    def get_maps_votation_from_page(self, page):
+        maps_data = page.select('.g-grid.maps > div:first-child > div')
+        votation_index = self.__get_map_metadata_index('votation', maps_data)
+
+        if votation_index is None:
+            return None
+
+        maps_votation = maps_data[votation_index].select('div div:not(:last-child)')
+        maps_votation_by_option = {
+            'picked': 'picks',
+            'removed': 'bans'
+        }
+        maps_voted_by_team = {}
+
+        for map_votation in maps_votation:
+            votation = {
+                'team': None,
+                'map': None
+            }
+            votation_text = map_votation.get_text()
+            vote = None
+
+            for vote_option in maps_votation_by_option:
+                if vote_option in votation_text:
+                    vote = vote_option
+                    votation_splited = votation_text.split(vote)
+                    team_name = votation_splited[0][3:-1]
+                    map_name = votation_splited[1][1:]
+                    votation = {
+                        'team': team_name,
+                        'map': map_name
+                    }
+                    vote = maps_votation_by_option[vote_option]
+
+                    if team_name not in maps_voted_by_team:
+                        maps_voted_by_team[team_name] = {
+                            'picks': [],
+                            'bans': []
+                        }
+
+                    break
+
+            maps_voted_by_team[votation['team']][vote].append(votation['map'])
+
+        return maps_voted_by_team
+
     def get_page_data_from_page(self, page):
         page = page.find('div', {'class': 'contentCol'})
         page_data = {}
@@ -75,9 +151,10 @@ class Match(Page):
         if page is not None:
             self.__set_match_event_from_page(page)
 
-            page_data['results'] = self.__get_match_result_from_page(page)
-            page_data['matched_at'] = self.__get_match_timestamp_from_page(
-                page)
+            page_data['results'] = self.get_match_result_from_page(page)
+            page_data['matched_at'] = self.get_match_timestamp_from_page(page)
+            page_data['event_id'] = self.get_event_id_from_event()
+            page_data['maps_votation'] = self.get_maps_votation_from_page(page)
 
             return page_data
 
@@ -310,13 +387,11 @@ class Match(Page):
                 maps_voted = None
 
                 if MAPS_VOTED is not None:
-                    maps_voted = maps_voted_and_maps_played[MAPS_VOTED].find(
-                        'div', {'class': 'padding'})
+                    maps_voted = maps_voted_and_maps_played[MAPS_VOTED].find('div', {'class': 'padding'})
 
                 maps_played = maps_voted_and_maps_played[MAPS_PLAYED]
 
-                votation_by_team = get_maps_picked_and_banned_by_team(
-                    maps_voted)
+                votation_by_team = get_maps_picked_and_banned_by_team(maps_voted)
                 maps_played = get_maps_played(maps_played)
 
                 if not votation_by_team and not maps_played:
