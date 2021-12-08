@@ -53,6 +53,40 @@ class Match(Page):
 
         return maps_by_metadata[metadata]
 
+    def __get_side_index_in_team_map_result(self, team_map_result):
+        position = team_map_result.attrs['class'][0]
+        side_index_by_position = {
+            'results-left': 0,
+            'results-right': 1
+        }
+
+        return side_index_by_position[position]
+
+    def __get_team_sides_results_from_map_results(self, team, map_results):
+        team_name = team.select_one('div.results-teamname').get_text().lower()
+        halfs_results = []
+        side = map_results.select_one('div.results-center-half-score > span:nth-child(2)').attrs['class'][0]
+        side_position_index = self.__get_side_index_in_team_map_result(team)
+        sides_results = {
+            't': 0,
+            'ct': 0
+        }
+
+        for half_result in map_results.select_one('div.results-center-half-score').get_text().split(";"):
+            halfs_results.append(half_result.replace("(", "").replace(")", "").strip())
+
+        for half_result in halfs_results:
+            side_result = half_result.split(':')[side_position_index]
+            sides_results[side] += int(side_result)
+
+            side = helpers.toggle_value(side, ['t', 'ct'])
+
+        return {
+            'name': team_name,
+            'tr_rounds_wins': sides_results['t'],
+            'ct_rounds_wins': sides_results['ct']
+        }
+
     def get_match_result_from_page(self, page):
         wrapper = page.find('div', {'class': {'standard-box', 'teamsBox'}})
         teams = wrapper.findAll('div', {'class': 'team'})
@@ -144,6 +178,28 @@ class Match(Page):
 
         return maps_voted_by_team
 
+    def get_maps_played_from_page(self, page):
+        maps_data = page.select('.g-grid.maps > div:first-child > div')
+        maps_played_index = self.__get_map_metadata_index('played', maps_data)
+        maps_played = maps_data[maps_played_index].select('div.mapholder')
+        invalid_maps_names = ['tba', 'default']
+        maps_played_by_team = {}
+
+        for map_played in maps_played:
+            optional_map = map_played.select_one('div.optional')
+            map_name = map_played.select_one('div > div.mapname').get_text().lower()
+            map_results = map_played.select_one('div.results')
+
+            if optional_map is not None or map_name in invalid_maps_names or map_results is None:
+                continue
+
+            team_left = map_results.select_one('.results-left')
+            results = map_results.select_one('.results-center')
+            team_right = map_results.select_one('.results-right')
+
+            team_left_map_result = self.__get_team_sides_results_from_map_results(team_left, results)
+            team_right_map_result = self.__get_team_sides_results_from_map_results(team_right, results)
+
     def get_page_data_from_page(self, page):
         page = page.find('div', {'class': 'contentCol'})
         page_data = {}
@@ -155,6 +211,7 @@ class Match(Page):
             page_data['matched_at'] = self.get_match_timestamp_from_page(page)
             page_data['event_id'] = self.get_event_id_from_event()
             page_data['maps_votation'] = self.get_maps_votation_from_page(page)
+            page_data['maps_played'] = self.get_maps_played_from_page(page)
 
             return page_data
 
@@ -339,13 +396,10 @@ class Match(Page):
                             't': 'tr_rounds_wins',
                             'ct': 'ct_rounds_wins'
                         }
-                        sides_result = "".join(
-                            [character.get_text() for character in sides_results_not_serialized])
+                        sides_result = "".join([character.get_text() for character in sides_results_not_serialized])
                         not_overtime = sides_result.index(')')
-                        sides_result = sides_result[2:not_overtime].replace(
-                            ' ', '')
-                        halfs = [half.split(':')
-                                 for half in sides_result.split(';')]
+                        sides_result = sides_result[2:not_overtime].replace(' ', '')
+                        halfs = [half.split(':') for half in sides_result.split(';')]
 
                         LEFT_TEAM = 0
                         RIGHT_TEAM = 1
@@ -361,8 +415,7 @@ class Match(Page):
                         if map_name not in maps_played_by_teams_results:
                             maps_played_by_teams_results[map_name] = {}
 
-                        maps_played_by_teams_results[map_name] = [
-                            left_result, right_result]
+                        maps_played_by_teams_results[map_name] = [left_result, right_result]
 
                     return maps_played_by_teams_results
 
