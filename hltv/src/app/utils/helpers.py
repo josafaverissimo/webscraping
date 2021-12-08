@@ -2,12 +2,14 @@ from datetime import timedelta
 from .database.connection import Sql
 
 days_by_period = {
-    'year': timedelta(days = 365),
-    'month': timedelta(days = 30)
+    'year': timedelta(days=365),
+    'month': timedelta(days=30)
 }
 
+
 def subtract_date_by_difference(date, diff):
-    return (date.replace(day = 1) - diff).replace(day=date.day)
+    return (date.replace(day=1) - diff).replace(day=date.day)
+
 
 def get_team_url_page(team):
     def get_team(team):
@@ -36,12 +38,14 @@ def get_team_url_page(team):
 
     return get_url(team)
 
+
 def has_none_value(dictonary):
     for value in dictonary.values():
         if value is None:
             return True
 
     return False
+
 
 def is_all_values_none(dictonary):
     for value in dictonary.values():
@@ -50,9 +54,14 @@ def is_all_values_none(dictonary):
 
     return True
 
+
 def is_key_and_value_in_dictonary(dictonary, key_to_search, value_to_search):
     for key, value in dictonary.items():
         if key == key_to_search and value == value_to_search:
             return True
 
     return False
+
+
+def toggle_value(value, values):
+    return values[0] if value == values[1] else values[1]
