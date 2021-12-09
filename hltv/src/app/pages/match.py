@@ -62,30 +62,38 @@ class Match(Page):
 
         return side_index_by_position[position]
 
-    def __get_team_sides_results_from_map_results(self, team, map_results):
-        team_name = team.select_one('div.results-teamname').get_text().lower()
-        halfs_results = []
-        side = map_results.select_one('div.results-center-half-score > span:nth-child(2)').attrs['class'][0]
-        side_position_index = self.__get_side_index_in_team_map_result(team)
-        sides_results = {
-            't': 0,
-            'ct': 0
-        }
+    def __get_map_result_halfs(self, half_score):
+        halfs = "".join([half_result.get_text() for half_result in half_score]).strip()
+        no_overtime_index = halfs.index(')')
 
-        for half_result in map_results.select_one('div.results-center-half-score').get_text().split(";"):
-            halfs_results.append(half_result.replace("(", "").replace(")", "").strip())
+        return halfs[1:no_overtime_index]
+
+    def __get_map_played_result(self, team, map_results):
+        team_name = team.select_one('div.results-teamname').get_text().lower()
+        map_results = map_results.select_one('div.results-center-half-score')
+        side = map_results.contents[1].attrs['class'][0]
+        side_position_index = self.__get_side_index_in_team_map_result(team)
+
+        halfs_results = self.__get_map_result_halfs(map_results).split(";")
+        maps_played_by_team = []
 
         for half_result in halfs_results:
+            sides_results = {
+                't': 0,
+                'ct': 0
+            }
+            half_result = half_result.strip()
             side_result = half_result.split(':')[side_position_index]
-            sides_results[side] += int(side_result)
+            sides_results[side] = int(side_result)
 
             side = helpers.toggle_value(side, ['t', 'ct'])
+            maps_played_by_team.append({
+                'team_name': team_name,
+                'tr_rounds_wins': sides_results['t'],
+                'ct_rounds_wins': sides_results['ct']
+            })
 
-        return {
-            'name': team_name,
-            'tr_rounds_wins': sides_results['t'],
-            'ct_rounds_wins': sides_results['ct']
-        }
+        return maps_played_by_team
 
     def get_match_result_from_page(self, page):
         wrapper = page.find('div', {'class': {'standard-box', 'teamsBox'}})
@@ -183,12 +191,13 @@ class Match(Page):
         maps_played_index = self.__get_map_metadata_index('played', maps_data)
         maps_played = maps_data[maps_played_index].select('div.mapholder')
         invalid_maps_names = ['tba', 'default']
-        maps_played_by_team = {}
+        maps_played_results_by_team = {}
 
         for map_played in maps_played:
             optional_map = map_played.select_one('div.optional')
             map_name = map_played.select_one('div > div.mapname').get_text().lower()
             map_results = map_played.select_one('div.results')
+            teams_map_results = []
 
             if optional_map is not None or map_name in invalid_maps_names or map_results is None:
                 continue
@@ -197,8 +206,20 @@ class Match(Page):
             results = map_results.select_one('.results-center')
             team_right = map_results.select_one('.results-right')
 
-            team_left_map_result = self.__get_team_sides_results_from_map_results(team_left, results)
-            team_right_map_result = self.__get_team_sides_results_from_map_results(team_right, results)
+            teams_map_results.append(self.__get_map_played_result(team_left, results))
+            teams_map_results.append(self.__get_map_played_result(team_right, results))
+
+            for team_map_result in teams_map_results:
+                for half in team_map_result:
+                    team_name = half['team_name']
+
+                    maps_played_results_by_team[team_name] = {
+                        'map_name': map_name,
+                        'tr_rounds_wins': half['tr_rounds_wins'],
+                        'ct_rounds_wins': half['ct_rounds_wins']
+                    }
+
+        return maps_played_results_by_team
 
     def get_page_data_from_page(self, page):
         page = page.find('div', {'class': 'contentCol'})
