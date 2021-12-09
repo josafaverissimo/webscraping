@@ -95,6 +95,23 @@ class Match(Page):
 
         return maps_played_by_team
 
+    def __rearrange_page_data(self, unrearrange_data):
+        teams = [team for team in unrearrange_data['results']]
+
+        page_data = {
+            'matched_at': unrearrange_data['matched_at'],
+            'results_by_team': {team: {} for team in teams},
+            'event_id': unrearrange_data['event_id'],
+            'results_by_team': {team: {} for team in teams}
+        }
+
+        for team in teams:
+            page_data['results_by_team'][team]['votation'] = unrearrange_data['maps_votation'][team]
+            page_data['results_by_team'][team]['result'] = unrearrange_data['results'][team]
+            page_data['results_by_team'][team]['maps_played'] = unrearrange_data['maps_played_by_team'][team]
+
+        return page_data
+
     def get_match_result_from_page(self, page):
         wrapper = page.find('div', {'class': {'standard-box', 'teamsBox'}})
         teams = wrapper.findAll('div', {'class': 'team'})
@@ -166,8 +183,8 @@ class Match(Page):
                 if vote_option in votation_text:
                     vote = vote_option
                     votation_splited = votation_text.split(vote)
-                    team_name = votation_splited[0][3:-1]
-                    map_name = votation_splited[1][1:]
+                    team_name = votation_splited[0][3:-1].lower()
+                    map_name = votation_splited[1][1:].lower()
                     votation = {
                         'team': team_name,
                         'map': map_name
@@ -232,7 +249,9 @@ class Match(Page):
             page_data['matched_at'] = self.get_match_timestamp_from_page(page)
             page_data['event_id'] = self.get_event_id_from_event()
             page_data['maps_votation'] = self.get_maps_votation_from_page(page)
-            page_data['maps_played'] = self.get_maps_played_from_page(page)
+            page_data['maps_played_by_team'] = self.get_maps_played_from_page(page)
+            page_data = self.__rearrange_page_data(page_data)
+            page_data['hltv_id'] = self.get_searchable_data('hltv_id')
 
             return page_data
 
