@@ -22,9 +22,9 @@ class MatchMapPicked(Orm):
         }
 
         relationships_by_table_name = Orm.get_orms_by_relationships(relationships, {
-            'maps': {'references_key': 'id', 'foreign_key': 'event_id', 'orm': Map},
-            'teams': {'references_key': 'id', 'foreign_key': 'event_id', 'orm': Team},
-            'matches': {'references_key': 'id', 'foreign_key': 'event_id', 'orm': Match},
+            'maps': {'references_key': 'id', 'foreign_key': 'map_id', 'orm': Map},
+            'teams': {'references_key': 'id', 'foreign_key': 'team_id', 'orm': Team},
+            'matches': {'references_key': 'id', 'foreign_key': 'match_id', 'orm': Match},
         })
 
         super().__init__(table_name, columns, get_columns, set_columns, relationships_by_table_name)
