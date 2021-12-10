@@ -98,9 +98,7 @@ class Orm:
             self.set_column(column, value)
 
     def reset_columns_values(self):
-        columns = {column: None for column in self.__set_columns}
-
-        self.set_columns(columns)
+        self.__columns = {column: None for column in self.__columns.copy()}
 
     def get_all(self, columns_filtered=None):
         columns_filtered = "*" if columns_filtered is None else ', '.join(
@@ -239,8 +237,7 @@ class Orm:
         foreign_keys = {}
 
         for relationship_name in self.__relationships_by_table_name:
-            foreign_keys[relationship_name] = self.set_foreign_key_by_relationship(
-                relationship_name)
+            foreign_keys[relationship_name] = self.set_foreign_key_by_relationship(relationship_name)
 
         return foreign_keys
 
