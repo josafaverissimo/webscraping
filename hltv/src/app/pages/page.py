@@ -46,19 +46,19 @@ class Page:
         return url != self.__current_url
 
     def get_orm(self):
-        self.__orm.reset_columns_values()
-
         return self.__orm
 
     def load_page_data_by(self, searchable_data_name, searchable_data_value=None):
-        page = self.get_page_by_searchable_data(
-            searchable_data_name, searchable_data_value)
+        page = self.get_page_by_searchable_data(searchable_data_name, searchable_data_value)
 
         if page is None:
             return None
 
         page_data = self.get_page_data_from_page(page)
-        self.get_orm().set_columns(page_data)
+        orm = self.get_orm()
+        orm.reset_columns_values()
+        orm.set_columns(page_data)
+
         self._set_page_data(page_data)
 
         return page_data
