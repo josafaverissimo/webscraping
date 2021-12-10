@@ -33,5 +33,4 @@ class MatchMapBanned(Orm):
             'matches': {'references_key': 'id', 'foreign_key': 'match_id', 'orm': Match}
         })
 
-        super().__init__(table_name, columns, get_columns,
-                         set_columns, relationships_by_table_name)
+        super().__init__(table_name, columns, get_columns, set_columns, relationships_by_table_name)

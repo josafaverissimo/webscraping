@@ -29,8 +29,7 @@ class Match(Orm):
             'events': {'references_key': 'id', 'foreign_key': 'event_id', 'orm': Event}
         })
 
-        super().__init__(table_name, columns, get_columns,
-                         set_columns, relationships_by_table_name)
+        super().__init__(table_name, columns, get_columns, set_columns, relationships_by_table_name)
 
     def set_matched_at(self, timestamp):
         timestamp = int(timestamp)
