@@ -1,8 +1,9 @@
 from ..utils import requester
+from ..utils.database.orms.orm import Orm
 
 
 class Page:
-    def __init__(self, base_url: str, searchable_data: str, orm, partial_uri=None):
+    def __init__(self, base_url: str, searchable_data: str, orm: Orm = None, partial_uri=None):
         self.__base_url = base_url
         self.__page_data = None
         self.__searchable_data = searchable_data

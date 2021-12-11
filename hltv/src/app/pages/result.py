@@ -1,25 +1,36 @@
-from ..utils.requester import get_page
 from .match import Match
+from .page import Page
 
 
-class Result:
-    def __init__(self, team_hltv_id):
-        self.__result_data = {
-            'team_hltv_id': team_hltv_id,
-            'matches_hltv_ids': []
+class Result(Page):
+    def __init__(self, team_hltv_id: int = None):
+        base_url = 'https://www.hltv.org/results?team='
+        searchable_data = {
+            'team_hltv_id': {
+                'value': team_hltv_id,
+                'get_partial_uri': self.__get_partial_uri_by_team_hltv_id,
+                'set_value': int
+            }
         }
 
-    def get_team_hltv_id(self):
-        return self.__result_data['team_hltv_id']
+        super().__init__(base_url, searchable_data)
 
-    def set_team_hltv_id(self, hltv_id):
-        self.__result_data['team_hltv_id'] = int(hltv_id)
+    def __get_partial_uri_by_team_hltv_id(self, team_hltv_id):
+        return team_hltv_id
 
-    def get_matches_hltv_ids(self):
-        return self.__result_data['matches_hltv_ids']
+    def __get_matches_hltv_ids_from_page(self, page):
+        print(page)
 
-    def set_matches_hltv_ids(self, matches_hltv_ids):
-        self.__result_data['matches_hltv_ids'] = matches_hltv_ids
+    def get_page_data_from_page(self, page):
+        page = page.find('div', {'class': 'event-page'})
+        page_data = {}
+
+        if page is not None:
+            page_data['matches_hltv_ids'] = self.__get_matches_hltv_ids_from_page(page)
+
+            return page_data
+
+        return None
 
     def get_team_matches_hltv_ids(self, team_hltv_id=None):
         def get_results_urls(team_hltv_id, total_matches):
@@ -43,8 +54,7 @@ class Result:
             return total_matches
 
         def get_matches_hltv_ids_from_result_page(result_page):
-            results_sublist = result_page.find_all(
-                'div', {'class': 'results-sublist'})
+            results_sublist = result_page.find_all('div', {'class': 'results-sublist'})
             matches_hltv_ids = []
 
             for day_results in results_sublist:
@@ -83,10 +93,6 @@ class Result:
                 matches_hltv_ids.append(match_hltv_id)
 
         return matches_hltv_ids
-
-    def load_team_matches_hltv_ids(self, team_hltv_id=None):
-        matches_hltv_ids = self.get_team_matches_hltv_ids(team_hltv_id)
-        self.set_matches_hltv_ids(matches_hltv_ids)
 
     def store(self):
         matches_hltv_ids = self.get_matches_hltv_ids()
