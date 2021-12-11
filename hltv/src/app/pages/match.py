@@ -8,6 +8,7 @@ from ..utils.database.orms.match_map_banned import MatchMapBanned as MatchMapBan
 from ..utils.database.orms.match_map_picked import MatchMapPicked as MatchMapPickedORM
 from ..utils.database.orms.match import Match as MatchORM
 from ..utils.database.orms.match_team_result import MatchTeamResult as MatchTeamResultORM
+from ..utils.database.orms.match_team_map_result import MatchTeamMapResult as MatchTeamMapResultORM
 
 
 class Match(Page):
@@ -43,6 +44,12 @@ class Match(Page):
         })
 
         self.__match_team_result_orm = MatchTeamResultORM(relationships={
+            'teams': self.__team_page.get_orm(),
+            'matches': orm
+        })
+
+        self.__match_team_map_result_orm = MatchTeamMapResultORM(relationships={
+            'maps': self.__map_orm,
             'teams': self.__team_page.get_orm(),
             'matches': orm
         })
@@ -150,14 +157,28 @@ class Match(Page):
         })
         match_orm.set_foreign_key_by_relationship('events')
 
-        return match_orm.create()
+        match_stored = match_orm.get_by_column('hltv_id')
+
+        if match_stored is not None:
+            return match_orm.create()
+
+        return match_stored
 
     def __store_match_team_result(self, result):
         self.__match_team_result_orm.set_columns({
             'result': result
         })
         self.__match_team_result_orm.set_all_foreign_key()
-        return self.__match_team_result_orm.create()
+
+        match_team_result_store = self.__match_team_result_orm.get_by_columns({
+            'team_id': None,
+            'match_id': None
+        })
+
+        if match_team_result_store is None:
+            return self.__match_team_result_orm.create()
+
+        return match_team_result_store
 
     def __store_match_votation(self, votation):
         orms_by_vote = {
@@ -170,26 +191,48 @@ class Match(Page):
             maps = votation[vote]
 
             for map_name in maps:
-                self.__map_orm.reset_columns_values()
-                self.__map_orm.set_columns({
-                    'name': map_name
-                })
+                map_stored = self.__map_orm.load_by_column('name', map_name)
+
+                if map_stored is None:
+                    self.__map_orm.reset_columns_values()
+                    self.__map_orm.set_columns({
+                        'name': map_name
+                    })
 
                 orm.set_all_foreign_key()
-                orm.create()
+
+                row_stored = orm.get_by_columns({
+                    'map_id': None,
+                    'team_id': None,
+                    'match_id': None
+                })
+
+                if row_stored is None:
+                    orm.create()
 
     def __store_match_team_maps_results(self, maps_results):
         for map_name in maps_results:
             map_result = maps_results[map_name]
 
-            self.__map_orm.reset_columns_values()
-            self.__map_orm.set_columns({
-                'name': map_name
+            map_stored = self.__map_orm.load_by_column('name', map_name)
+
+            if map_stored is None:
+                self.__map_orm.reset_columns_values()
+                self.__map_orm.set_columns({
+                    'name': map_name
+                })
+
+            self.__match_team_map_result_orm.set_columns(map_result)
+            self.__match_team_map_result_orm.set_all_foreign_key()
+
+            match_team_map_result_stored = self.__match_team_map_result_orm.get_by_columns({
+                'team_id': None,
+                'map_id': None,
+                'match_id': None
             })
 
-            self.__match_team_result_orm.set_columns(map_result)
-            self.__match_team_result_orm.set_all_foreign_key()
-            self.__match_team_result_orm.create()
+            if match_team_map_result_stored is None:
+                self.__match_team_map_result_orm.create()
 
     def __store_match_data_by_team(self):
         page_data = self.get_page_data()
