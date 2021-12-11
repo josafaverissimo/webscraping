@@ -111,8 +111,9 @@ class Orm:
         finally:
             self.__sql.close_connection()
 
-    def get_by_column(self, column, value, columns_filtered=None):
+    def get_by_column(self, column, value=None, columns_filtered=None):
         columns_filtered = "*" if columns_filtered is None else ', '.join(columns_filtered)
+        value = value if value is not None else self.get_column(column)
         result = None
 
         try:
@@ -120,8 +121,31 @@ class Orm:
             condition = f'{column} = %s'
 
             result = self.__sql.execute(
-                f'select {columns_filtered} from {self.get_table_name()} where {condition}',
-                value
+                f'select {columns_filtered} from {self.get_table_name()} where {condition}', value
+            ).fetchone()
+        finally:
+            self.__sql.close_connection()
+
+        return result
+
+    def get_by_columns(self, values_by_column: dict, columns_filtered=None):
+        for column in values_by_column.copy():
+            value = values_by_column[column]
+
+            if value is None:
+                values_by_column[column] = self.get_column(column)
+
+        columns_filtered = "*" if columns_filtered is None else ', '.join(columns_filtered)
+        columns = [column for column in values_by_column.keys()]
+        values = [value for value in values_by_column.values()]
+        condition = " and ".join([f'{column} = %s' for column in columns])
+        result = None
+
+        try:
+            self.__sql.open_connection()
+
+            result = self.__sql.execute(
+                f'select {columns_filtered} from {self.get_table_name()} where {condition}', values
             ).fetchone()
         finally:
             self.__sql.close_connection()
