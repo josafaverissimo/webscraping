@@ -22,6 +22,7 @@ create table teams(
 	id int(11) unsigned not null primary key auto_increment,
 	name varchar(255) not null,
     hltv_id int(11) unsigned not null,
+    world_ranking int(11) unsigned,
 	created_at timestamp not null default current_timestamp
 );
 
@@ -92,5 +93,3 @@ create table matches_teams_maps_results(
     constraint matches_teams_maps_results_map_id_fk foreign key (map_id) references maps(id),
     constraint matches_teams_maps_results_match_id_fk foreign key (match_id) references matches(id)
 );
-
-alter table teams add column world_ranking int(11) unsigned not null after hltv_id;
