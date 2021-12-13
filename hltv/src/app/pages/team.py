@@ -78,7 +78,10 @@ class Team(Page):
 
     def get_world_ranking(self, page):
         wrapper = page.find('div', {'class': 'profile-team-stat'})
-        world_ranking = int(wrapper.find('a').get_text().replace('#', ''))
+        world_ranking = wrapper.find('a')
+
+        if world_ranking is not None:
+            world_ranking = int(wrapper.find('a').get_text().replace('#', ''))
 
         return world_ranking
 
@@ -97,7 +100,7 @@ class Team(Page):
 
     def store(self):
         page_data = self.get_page_data()
-        team_orm = self._get_orm()
+        team_orm = self.get_orm()
 
         if page_data is not None:
             team_orm.set_columns(page_data)
