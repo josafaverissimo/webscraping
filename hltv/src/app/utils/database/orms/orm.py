@@ -153,25 +153,24 @@ class Orm:
         return result
 
     def create(self):
-        columns_to_save = self.get_columns(self.__set_columns)
+        columns_to_save = dict(filter(lambda value: value[1] is not None, self.get_columns(self.__set_columns).items()))
 
-        if not helpers.has_none_value(columns_to_save):
-            columns_to_save_name = ', '.join(list(columns_to_save))
-            columns_to_save_values = list(columns_to_save.values())
-            params = "%s," * (len(columns_to_save) - 1) + "%s"
-            last_id = None
-            query = f'insert into {self.get_table_name()} ({columns_to_save_name}) values ({params})'
+        columns_to_save_name = ', '.join(list(columns_to_save))
+        columns_to_save_values = list(columns_to_save.values())
+        params = "%s," * (len(columns_to_save) - 1) + "%s"
+        last_id = None
+        query = f'insert into {self.get_table_name()} ({columns_to_save_name}) values ({params})'
 
-            result = self.query(query, columns_to_save_values)
+        result = self.query(query, columns_to_save_values)
 
-            if result is not None:
-                last_id = result['last_insert_id']
+        if result is not None:
+            last_id = result['last_insert_id']
 
-                result = self.get_by_column('id', last_id)
+            result = self.get_by_column('id', last_id)
 
-                self.__load(result)
+            self.__load(result)
 
-            return result
+        return result
 
     def update(self, columns=None):
         if columns is not None:
