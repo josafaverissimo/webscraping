@@ -1,10 +1,11 @@
 from .match import Match
 from .page import Page
+from ..utils import requester
 
 
 class Result(Page):
     def __init__(self, team_hltv_id: int = None):
-        base_url = 'https://www.hltv.org/results?team='
+        base_url = 'https://www.hltv.org/results'
         searchable_data = {
             'team_hltv_id': {
                 'value': team_hltv_id,
@@ -12,17 +13,55 @@ class Result(Page):
                 'set_value': int
             }
         }
+        self.__match_page = Match()
 
         super().__init__(base_url, searchable_data)
 
     def __get_partial_uri_by_team_hltv_id(self, team_hltv_id):
-        return team_hltv_id
+        return f'?team={team_hltv_id}'
+
+    def __get_total_matches_from_page(self, page):
+        pagination = page.select_one('span.pagination-data').get_text()
+        total_matches = int(pagination.split('of')[1].strip())
+
+        return total_matches
+
+    def __get_all_results_urls_from_page(self, page):
+        MATCHES_PER_PAGE = 100
+        team_hltv_id = self.get_searchable_data('team_hltv_id')
+
+        total_matches = self.__get_total_matches_from_page(page)
+        total_results_pages = total_matches // MATCHES_PER_PAGE
+
+        base_url = self.get_base_url()
+        urls = []
+
+        for offset in range(1, total_results_pages + 1):
+            page_offset = offset * MATCHES_PER_PAGE
+            urls.append(f'{base_url}?offset={page_offset}&team={team_hltv_id}')
+
+        return urls
 
     def __get_matches_hltv_ids_from_page(self, page):
-        print(page)
+        results_urls = self.__get_all_results_urls_from_page(page)
+        pages = [page] + requester.get_pages_from_urls(results_urls, lambda page: page.select_one('div.results'))
+        matches_hltv_ids = []
+
+        for page in pages:
+            results_sublist = page.select('div.results-sublist')
+
+            for day_results in results_sublist:
+                results = day_results.select('div.result-con')
+
+                for result in results:
+                    match_url = result.select_one('a.a-reset')
+                    match_hltv_id = int(match_url.attrs['href'].split('/')[2])
+                    matches_hltv_ids.append(match_hltv_id)
+
+        return matches_hltv_ids
 
     def get_page_data_from_page(self, page):
-        page = page.find('div', {'class': 'event-page'})
+        page = page.select_one('div.results')
         page_data = {}
 
         if page is not None:
@@ -32,71 +71,10 @@ class Result(Page):
 
         return None
 
-    def get_team_matches_hltv_ids(self, team_hltv_id=None):
-        def get_results_urls(team_hltv_id, total_matches):
-            MATCH_PER_PAGE = 100
-            base_url = "https://www.hltv.org/results?"
-            urls = []
-            total_matches //= MATCH_PER_PAGE
-
-            for offset in range(1, total_matches + 1):
-                matches_ordered_by_offset_in_page = offset * MATCH_PER_PAGE
-                urls.append(
-                    f"{base_url}offset={matches_ordered_by_offset_in_page}&team={team_hltv_id}")
-
-            return urls
-
-        def get_total_matches_from_result_page(result_page):
-            pagination = result_page.find(
-                'span', {'class': 'pagination-data'}).get_text()
-            total_matches = int(pagination.split('of')[1].lstrip())
-
-            return total_matches
-
-        def get_matches_hltv_ids_from_result_page(result_page):
-            results_sublist = result_page.find_all('div', {'class': 'results-sublist'})
-            matches_hltv_ids = []
-
-            for day_results in results_sublist:
-                results = day_results.find_all('div', {'class': 'result-con'})
-
-                for result in results:
-                    match_link = result.find('a', {'class': 'a-reset'})
-                    match_hltv_id = int(match_link.attrs['href'].split('/')[2])
-                    matches_hltv_ids.append(match_hltv_id)
-
-            return matches_hltv_ids
-
-        team_hltv_id = team_hltv_id if team_hltv_id is not None else self.get_team_hltv_id()
-        base_url = "https://www.hltv.org/results?"
-        url = f"{base_url}team={team_hltv_id}"
-        result_page = get_page(url)
-        matches_hltv_ids = []
-
-        if result_page is None:
-            return None
-
-        result_page = result_page.find('div', {'class': 'results'})
-        total_matches = get_total_matches_from_result_page(result_page)
-        urls = get_results_urls(team_hltv_id, total_matches)
-
-        for match_hltv_id in get_matches_hltv_ids_from_result_page(result_page):
-            matches_hltv_ids.append(match_hltv_id)
-
-        for url in urls:
-            result_page = get_page(url)
-
-            if result_page is None:
-                continue
-
-            for match_hltv_id in get_matches_hltv_ids_from_result_page(result_page):
-                matches_hltv_ids.append(match_hltv_id)
-
-        return matches_hltv_ids
-
     def store(self):
-        matches_hltv_ids = self.get_matches_hltv_ids()
+        matches_hltv_ids = self.get_page_data('matches_hltv_ids')
+
         for match_hltv_id in matches_hltv_ids:
-            match = Match(match_hltv_id)
-            match.load_match_by_hltv_id(match_hltv_id)
-            match.store()
+            self.__match_page.set_searchable_data('hltv_id', match_hltv_id)
+            self.__match_page.load_page_data_by('hltv_id')
+            self.__match_page.store()
