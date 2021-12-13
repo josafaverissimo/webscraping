@@ -57,8 +57,10 @@ class Page:
 
         page_data = self.get_page_data_from_page(page)
         orm = self.get_orm()
-        orm.reset_columns_values()
-        orm.set_columns(page_data)
+
+        if orm is not None:
+            orm.reset_columns_values()
+            orm.set_columns(page_data)
 
         self._set_page_data(page_data)
 
@@ -70,8 +72,7 @@ class Page:
     def set_searchable_data(self, name, value=None):
         if name in self.__searchable_data:
             searchable_data = self.__searchable_data[name]
-            searchable_data_value = searchable_data['set_value'](
-                value) if value is not None else None
+            searchable_data_value = searchable_data['set_value'](value) if value is not None else None
 
             self.__searchable_data[name]['value'] = searchable_data_value
 
@@ -104,5 +105,5 @@ class Page:
     def get_base_url(self):
         return self.__base_url
 
-    def get_page_data(self):
-        return self.__page_data
+    def get_page_data(self, index=None):
+        return self.__page_data if index is None else self.__page_data[index]
