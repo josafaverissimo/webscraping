@@ -141,10 +141,15 @@ class Match(Page):
             'match_data_by_team': {team: {} for team in teams}
         }
 
+        has_votation = unrearrange_data['maps_votation']
+        has_maps_results = unrearrange_data['maps_results_by_team']
+
         for team in teams:
-            page_data['match_data_by_team'][team]['votation'] = unrearrange_data['maps_votation'][team]
+            votation = unrearrange_data['maps_votation'][team] if has_votation else None
+            maps_results = unrearrange_data['maps_results_by_team'][team] if has_maps_results else None
+            page_data['match_data_by_team'][team]['votation'] = votation
+            page_data['match_data_by_team'][team]['maps_results'] = maps_results
             page_data['match_data_by_team'][team]['result'] = unrearrange_data['results'][team]
-            page_data['match_data_by_team'][team]['maps_results'] = unrearrange_data['maps_results_by_team'][team]
 
         return page_data
 
@@ -186,11 +191,36 @@ class Match(Page):
             'bans': self.__match_map_banned_orm
         }
 
-        for vote in votation:
-            orm: Orm = orms_by_vote[vote]
-            maps = votation[vote]
+        if votation is not None:
+            for vote in votation:
+                orm: Orm = orms_by_vote[vote]
+                maps = votation[vote]
 
-            for map_name in maps:
+                for map_name in maps:
+                    map_stored = self.__map_orm.load_by_column('name', map_name)
+
+                    if map_stored is None:
+                        self.__map_orm.reset_columns_values()
+                        self.__map_orm.set_columns({
+                            'name': map_name
+                        })
+
+                    orm.set_all_foreign_key()
+
+                    row_stored = orm.get_by_columns({
+                        'map_id': None,
+                        'team_id': None,
+                        'match_id': None
+                    })
+
+                    if row_stored is None:
+                        orm.create()
+
+    def __store_match_team_maps_results(self, maps_results):
+        if maps_results is not None:
+            for map_name in maps_results:
+                map_result = maps_results[map_name]
+
                 map_stored = self.__map_orm.load_by_column('name', map_name)
 
                 if map_stored is None:
@@ -199,40 +229,17 @@ class Match(Page):
                         'name': map_name
                     })
 
-                orm.set_all_foreign_key()
+                self.__match_team_map_result_orm.set_columns(map_result)
+                self.__match_team_map_result_orm.set_all_foreign_key()
 
-                row_stored = orm.get_by_columns({
-                    'map_id': None,
+                match_team_map_result_stored = self.__match_team_map_result_orm.get_by_columns({
                     'team_id': None,
+                    'map_id': None,
                     'match_id': None
                 })
 
-                if row_stored is None:
-                    orm.create()
-
-    def __store_match_team_maps_results(self, maps_results):
-        for map_name in maps_results:
-            map_result = maps_results[map_name]
-
-            map_stored = self.__map_orm.load_by_column('name', map_name)
-
-            if map_stored is None:
-                self.__map_orm.reset_columns_values()
-                self.__map_orm.set_columns({
-                    'name': map_name
-                })
-
-            self.__match_team_map_result_orm.set_columns(map_result)
-            self.__match_team_map_result_orm.set_all_foreign_key()
-
-            match_team_map_result_stored = self.__match_team_map_result_orm.get_by_columns({
-                'team_id': None,
-                'map_id': None,
-                'match_id': None
-            })
-
-            if match_team_map_result_stored is None:
-                self.__match_team_map_result_orm.create()
+                if match_team_map_result_stored is None:
+                    self.__match_team_map_result_orm.create()
 
     def __store_match_data_by_team(self):
         page_data = self.get_page_data()
