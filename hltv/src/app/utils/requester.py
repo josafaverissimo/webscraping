@@ -5,6 +5,7 @@ from time import sleep
 from random import randrange
 import json
 
+
 def get_page(url):
     response = perform_request_and_get_response(url)
 
@@ -12,8 +13,22 @@ def get_page(url):
         return None
 
     html = BeautifulSoup(response.read(), 'html.parser')
-    
+
     return html
+
+
+def get_pages_from_urls(urls, callback):
+    pages = []
+
+    for url in urls:
+        page = get_page(url)
+
+        if page is not None:
+            page = callback(page)
+            pages.append(page)
+
+    return pages
+
 
 def get_data_from_json_api(url):
     response = perform_request_and_get_response(url)
@@ -25,6 +40,7 @@ def get_data_from_json_api(url):
 
     return response
 
+
 def perform_request_and_get_response(url):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:95.0) Gecko/20100101 Firefox/95.0',
@@ -35,9 +51,9 @@ def perform_request_and_get_response(url):
     response = None
 
     try:
-        request = Request(url, headers = headers)
+        request = Request(url, headers=headers)
 
-        sleep(randrange(1,10))
+        sleep(randrange(1, 10))
 
         response = urlopen(request)
 
