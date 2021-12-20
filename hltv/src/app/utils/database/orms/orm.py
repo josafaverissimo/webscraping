@@ -66,7 +66,7 @@ class Orm:
     def __load(self, columns_values):
         self.__columns = columns_values
 
-    def load_by_column(self, column, value):
+    def load_by_column(self, column, value=None):
         columns_values = self.get_by_column(column, value)
 
         if columns_values is not None:

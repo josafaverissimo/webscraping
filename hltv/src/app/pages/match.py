@@ -156,15 +156,19 @@ class Match(Page):
     def __store_match_data(self):
         page_data = self.get_page_data()
         match_orm: Orm = self.get_orm()
+
+        event_orm: Orm = match_orm.get_relationship_orm('events')
+        event_orm.load_by_column('hltv_id')
+
         match_orm.set_columns({
             'matched_at': page_data['matched_at'],
             'hltv_id': page_data['hltv_id']
         })
         match_orm.set_foreign_key_by_relationship('events')
 
-        match_stored = match_orm.get_by_column('hltv_id')
+        match_stored = match_orm.load_by_column('hltv_id')
 
-        if match_stored is not None:
+        if match_stored is None:
             return match_orm.create()
 
         return match_stored
@@ -175,15 +179,15 @@ class Match(Page):
         })
         self.__match_team_result_orm.set_all_foreign_key()
 
-        match_team_result_store = self.__match_team_result_orm.get_by_columns({
+        match_team_result_stored = self.__match_team_result_orm.get_by_columns({
             'team_id': None,
             'match_id': None
         })
 
-        if match_team_result_store is None:
+        if match_team_result_stored is None:
             return self.__match_team_result_orm.create()
 
-        return match_team_result_store
+        return match_team_result_stored
 
     def __store_match_votation(self, votation):
         orms_by_vote = {
@@ -241,16 +245,20 @@ class Match(Page):
                 if match_team_map_result_stored is None:
                     self.__match_team_map_result_orm.create()
 
-    def __store_match_data_by_team(self):
+    def __store_teams_match_data(self):
         page_data = self.get_page_data()
         match_data_by_team = page_data['match_data_by_team']
 
         for team_name in match_data_by_team:
             self.__set_team_page_data_from_team_name(team_name)
+
             team_match_data = page_data['match_data_by_team'][team_name]
             result = team_match_data['result']
             votation = team_match_data['votation']
             maps_results = team_match_data['maps_results']
+
+            team_orm = self.__team_page.get_orm()
+            team_orm.load_by_column('hltv_id')
 
             self.__store_match_team_result(result)
             self.__store_match_votation(votation)
@@ -402,4 +410,4 @@ class Match(Page):
 
     def store(self):
         self.__store_match_data()
-        self.__store_match_data_by_team()
+        self.__store_teams_match_data()
