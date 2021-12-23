@@ -1,3 +1,4 @@
+import abc
 from ..utils import requester
 from ..utils.database.orms.orm import Orm
 
@@ -45,6 +46,10 @@ class Page:
         url = self.get_url()
 
         return url != self.__current_url
+
+    @abc.abstractclassmethod
+    def get_page_data_from_page(self, page):
+        pass
 
     def get_orm(self):
         return self.__orm
