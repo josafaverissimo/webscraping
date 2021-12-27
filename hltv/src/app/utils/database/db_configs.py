@@ -1,8 +1,12 @@
+from ..env.env import Env
+
 # DEFAULT DB CONFIGS
 
+env = Env()
+
 default_config = {
-    'host': '127.0.0.1',
-    'user': 'root',
-    'password': '',
+    'host': 'localhost',
+    'user': env.get_variable('DB_USER'),
+    'password': env.get_variable('DB_PASSWD'),
     'db': 'hltv'
 }
