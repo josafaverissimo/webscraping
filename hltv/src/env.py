@@ -1,7 +1,7 @@
 from app.utils.env.env import Env
 from sys import argv
 
-env: Env = Env()
+env = Env()
 
 args = {}
 

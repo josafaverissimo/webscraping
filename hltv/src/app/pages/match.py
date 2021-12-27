@@ -132,8 +132,46 @@ class Match(Page):
 
         return maps_played_by_team
 
+    def __valid_dictonary_keys(self, valid_keys, dictonary_to_valid):
+        if len(dictonary_to_valid) > 2 or len(valid_keys) > 2:
+            return None
+
+        is_keys_valid = False
+
+        for key in dictonary_to_valid:
+            if key in valid_keys:
+                is_keys_valid = True
+                continue
+
+            is_keys_valid = False
+            break
+
+        if is_keys_valid:
+            return dictonary_to_valid
+
+        keys_not_valid = [key for key in dictonary_to_valid if key not in valid_keys]
+
+        if len(keys_not_valid) > 2:
+            return None
+
+        valid_key = [key for key in dictonary_to_valid if key in valid_keys][0]
+        missing_key = [key for key in valid_keys if key != valid_key][0]
+        key_not_valid = keys_not_valid[0]
+
+        a = {
+            valid_key: dictonary_to_valid[valid_key],
+            missing_key: dictonary_to_valid[key_not_valid]
+        }
+
+        return {
+            valid_key: dictonary_to_valid[valid_key],
+            missing_key: dictonary_to_valid[key_not_valid]
+        }
+
     def __rearrange_page_data(self, unrearrange_data):
         teams = [team for team in unrearrange_data['results']]
+
+        unrearrange_data['maps_votation'] = self.__valid_dictonary_keys(teams, unrearrange_data['maps_votation'])
 
         page_data = {
             'matched_at': unrearrange_data['matched_at'],
