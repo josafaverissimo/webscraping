@@ -57,7 +57,7 @@ def perform_request_and_get_response(url):
 
         response = urlopen(request)
 
-        print(f"[*]: {url}")
+        print(f"[*] {url}")
     except HTTPError as e:
         print(e)
         print(f"[x] Failed to get: {url}")
