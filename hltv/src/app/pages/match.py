@@ -171,7 +171,8 @@ class Match(Page):
     def __rearrange_page_data(self, unrearrange_data):
         teams = [team for team in unrearrange_data['results']]
 
-        unrearrange_data['maps_votation'] = self.__valid_dictonary_keys(teams, unrearrange_data['maps_votation'])
+        if unrearrange_data['maps_votation']:
+            unrearrange_data['maps_votation'] = self.__valid_dictonary_keys(teams, unrearrange_data['maps_votation'])
 
         page_data = {
             'matched_at': unrearrange_data['matched_at'],
