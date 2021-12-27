@@ -1,3 +1,4 @@
 **/__pycache__
 hltv/src/test.py
+hltv/src/app/utils/env/.env
 .vscode
