@@ -1,16 +1,23 @@
+import os
+
+
 class Env:
     def __init__(self):
         self.__env_path = f'{"/".join(__file__.split("/")[:-1])}/.env'
         self.__variables = {}
+        env_file = None
 
-        env_file = open(self.__env_path, 'a+')
+        if not os.path.isfile(self.__env_path):
+            env_file = open(self.__env_path, 'w+')
+        else:
+            env_file = open(self.__env_path, 'r')
 
         for line in env_file.readlines():
             line_splited = line.split('=')
 
             variable = {
-                'name': line_splited[0],
-                'value': line_splited[1]
+                'name': line_splited[0].replace('\n', ''),
+                'value': line_splited[1].replace('\n', '')
             }
 
             self.__variables[variable['name']] = variable['value']
