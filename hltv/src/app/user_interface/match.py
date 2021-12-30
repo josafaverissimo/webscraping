@@ -1,5 +1,5 @@
 from .interface import Boilerplate
-from ..pages.match import Match
+from ..pages.match import Match as MatchPage
 from ..utils import helpers
 
 
@@ -7,7 +7,7 @@ class Match(Boilerplate):
     def __init__(self):
         inputs = {
             'match': {
-                'datatype': Match,
+                'datatype': MatchPage,
                 'validation': lambda match_hltv_id: match_hltv_id.isnumeric(),
                 'message': 'Type match hltv id'
             }
@@ -16,7 +16,7 @@ class Match(Boilerplate):
         super().__init__(inputs)
 
     def main(self, user_inputs):
-        match: Match = user_inputs['match_hltv_id']
+        match: MatchPage = user_inputs['match']
 
         match.load_page_data_by('hltv_id')
         match.store()
