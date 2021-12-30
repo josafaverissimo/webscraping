@@ -112,7 +112,14 @@ class Match(Page):
         side_position_index = self.__get_side_index_in_team_map_result(team)
 
         halfs_results = self.__get_map_result_halfs(map_results).split(";")
-        maps_played_by_team = []
+        maps_played_result = {
+            'team_name': team_name,
+            'tr_rounds_wins': 0,
+            'ct_rounds_wins': 0
+        }
+
+        if side_position_index == 1:
+            side = helpers.toggle_value(side, ['t', 'ct'])
 
         for half_result in halfs_results:
             sides_results = {
@@ -124,13 +131,11 @@ class Match(Page):
             sides_results[side] = int(side_result)
 
             side = helpers.toggle_value(side, ['t', 'ct'])
-            maps_played_by_team.append({
-                'team_name': team_name,
-                'tr_rounds_wins': sides_results['t'],
-                'ct_rounds_wins': sides_results['ct']
-            })
 
-        return maps_played_by_team
+            maps_played_result['tr_rounds_wins'] += sides_results['t']
+            maps_played_result['ct_rounds_wins'] += sides_results['ct']
+
+        return maps_played_result
 
     def __valid_dictonary_keys(self, valid_keys, dictonary_to_valid):
         if len(dictonary_to_valid) > 2 or len(valid_keys) > 2:
@@ -291,7 +296,7 @@ class Match(Page):
         for team_name in match_data_by_team:
             self.__set_team_page_data_from_team_name(team_name)
 
-            team_match_data = page_data['match_data_by_team'][team_name]
+            team_match_data = match_data_by_team[team_name]
             result = team_match_data['result']
             votation = team_match_data['votation']
             maps_results = team_match_data['maps_results']
@@ -406,25 +411,24 @@ class Match(Page):
             teams_map_results.append(self.__get_map_played_result(team_right, results))
 
             for team_map_result in teams_map_results:
-                for half in team_map_result:
-                    team_name = half['team_name']
+                team_name = team_map_result['team_name']
 
-                    if team_name not in maps_played_results_by_team:
-                        maps_played_results_by_team[team_name] = {
-                            map_name: {
-                                'tr_rounds_wins': 0,
-                                'ct_rounds_wins': 0
-                            }
-                        }
-
-                    if map_name not in maps_played_results_by_team[team_name]:
-                        maps_played_results_by_team[team_name][map_name] = {
+                if team_name not in maps_played_results_by_team:
+                    maps_played_results_by_team[team_name] = {
+                        map_name: {
                             'tr_rounds_wins': 0,
                             'ct_rounds_wins': 0
                         }
+                    }
 
-                    maps_played_results_by_team[team_name][map_name]['tr_rounds_wins'] += half['tr_rounds_wins']
-                    maps_played_results_by_team[team_name][map_name]['ct_rounds_wins'] += half['ct_rounds_wins']
+                if map_name not in maps_played_results_by_team[team_name]:
+                    maps_played_results_by_team[team_name][map_name] = {
+                        'tr_rounds_wins': 0,
+                        'ct_rounds_wins': 0
+                    }
+
+                maps_played_results_by_team[team_name][map_name]['tr_rounds_wins'] += team_map_result['tr_rounds_wins']
+                maps_played_results_by_team[team_name][map_name]['ct_rounds_wins'] += team_map_result['ct_rounds_wins']
 
         return maps_played_results_by_team
 
