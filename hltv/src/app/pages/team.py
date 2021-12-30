@@ -1,7 +1,6 @@
 from .page import Page
 from ..utils import requester
 from ..utils.database.orms.team import Team as TeamORM
-from ..utils import helpers
 from urllib import parse
 
 

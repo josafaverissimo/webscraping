@@ -88,15 +88,12 @@ class Page:
     def get_page_by_searchable_data(self, searchable_data_name, searchable_data_value=None):
         if searchable_data_name in self.__searchable_data:
             if searchable_data_value is not None:
-                self.set_searchable_data(
-                    searchable_data_name, searchable_data_value)
+                self.set_searchable_data(searchable_data_name, searchable_data_value)
 
-            searchable_data_value = self.get_searchable_data(
-                searchable_data_name)
+            searchable_data_value = self.get_searchable_data(searchable_data_name)
 
             if searchable_data_value is not None:
-                partial_uri = self.__searchable_data[searchable_data_name]['get_partial_uri'](
-                    searchable_data_value)
+                partial_uri = self.__searchable_data[searchable_data_name]['get_partial_uri'](searchable_data_value)
 
                 self.__set_partial_uri(partial_uri)
 

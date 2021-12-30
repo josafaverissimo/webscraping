@@ -8,7 +8,7 @@
             "name": "Python",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/hltv/src/test.py",
+            "program": "${workspaceFolder}/hltv/src/main.py",
             "console": "integratedTerminal"
         }
     ]
