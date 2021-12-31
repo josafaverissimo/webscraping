@@ -49,10 +49,15 @@ class Event(Page):
 
     def store(self):
         page_data = self.get_page_data()
-        event_orm = self._get_orm()
+        event_orm = self.get_orm()
 
         if page_data is not None:
             event_orm.set_columns(page_data)
+
+            event_stored = event_orm.get_by_column('hltv_id', page_data['hltv_id'])
+
+            if event_stored is not None:
+                return event_stored
 
             return event_orm.create()
 
