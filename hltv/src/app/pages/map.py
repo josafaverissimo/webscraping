@@ -66,13 +66,16 @@ class Map(Page):
         orm = self.get_orm()
         page_data = self.get_page_data()
 
-        if not helpers.is_all_values_none(orm.get_columns()):
-            return orm.create()
-
         if page_data is None:
             return None
 
+        map_stored = orm.get_by_column('name', page_data['name'])
+
+        if map_stored is not None:
+            return map_stored
+
         orm.set_columns(page_data)
+        return orm.create()
 
     def store_all(self):
         maps_names = self.get_maps_partial_uri_by_map_name().keys()
