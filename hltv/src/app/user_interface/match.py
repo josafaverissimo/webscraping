@@ -1,6 +1,5 @@
 from .interface import Boilerplate
 from ..pages.match import Match as MatchPage
-from ..utils import helpers
 
 
 class Match(Boilerplate):
