@@ -15,18 +15,30 @@ class Env:
         for line in env_file.readlines():
             line_splited = line.split('=')
 
-            variable = {
-                'name': line_splited[0].replace('\n', ''),
-                'value': line_splited[1].replace('\n', '')
-            }
+            name = line_splited[0].replace('\n', '')
+            value = line_splited[1].replace('\n', '')
 
-            self.__variables[variable['name']] = variable['value']
+            self.__variables[name] = value
 
     def get_variable(self, name):
         return self.__variables[name]
 
+    def get_all_variables(self):
+        return self.__variables
+
     def set_variable(self, name, value):
+        has_variable = name in self.__variables
         self.__variables[name] = value
 
-        env_file = open(self.__env_path, 'a+')
-        env_file.write(f"{name}={value}\n")
+        if has_variable:
+            env_file = open(self.__env_path, 'w')
+            env_variables = "\n".join([
+                f"{env_variable_name}={self.__variables[env_variable_name]}"
+                for env_variable_name in self.__variables
+            ]) + "\n"
+
+            env_file.writelines(env_variables)
+
+        else:
+            env_file = open(self.__env_path, 'a+')
+            env_file.write(f"{name}={value}\n")
