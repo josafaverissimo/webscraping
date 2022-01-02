@@ -3,7 +3,7 @@ import os
 
 class Env:
     def __init__(self):
-        self.__env_path = f'{"/".join(__file__.split("/")[:-1])}/.env'
+        self.__env_path = os.path.dirname(__file__) + '/.env'
         self.__variables = {}
         env_file = None
 

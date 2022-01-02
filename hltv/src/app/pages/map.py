@@ -1,6 +1,7 @@
 from .page import Page
-from ..utils import helpers
+from bs4 import BeautifulSoup
 from ..utils import requester
+from ..utils.database.orms.orm import Orm
 from ..utils.database.orms.map import Map as MapORM
 
 
@@ -14,17 +15,14 @@ class Map(Page):
                 'set_value': str
             }
         }
-        orm = MapORM()
+        orm: Orm = MapORM()
 
         super().__init__(base_url, searchable_data, orm)
 
         self.__maps_partial_uri_by_name = None
         self.__set_maps_partial_uri()
 
-    def get_maps_partial_uri_by_map_name(self):
-        return self.__maps_partial_uri_by_name
-
-    def __get_maps_partial_uri_from_page(self, page):
+    def __get_maps_partial_uri_from_page(self, page: BeautifulSoup) -> dict:
         maps_anchors = page.select('nav.g-grid.maps-navigation > a')
         maps_data = {}
 
@@ -52,6 +50,9 @@ class Map(Page):
 
     def __get_map_name_from_page(self, page):
         return page.select_one('h1.standard-headline.inline').get_text().split(' ')[-1].lower()
+
+    def get_maps_partial_uri_by_map_name(self):
+        return self.__maps_partial_uri_by_name
 
     def get_page_data_from_page(self, page):
         page = page.select_one('div.contentCol')

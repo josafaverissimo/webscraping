@@ -2,3 +2,4 @@
 hltv/src/test.py
 hltv/src/app/utils/env/.env
 .vscode
+hltv/src/app/data

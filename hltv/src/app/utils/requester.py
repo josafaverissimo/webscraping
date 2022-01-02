@@ -6,7 +6,7 @@ from random import randrange
 import json
 
 
-def get_page(url):
+def get_page(url) -> BeautifulSoup:
     response = perform_request_and_get_response(url)
 
     if response is None:
