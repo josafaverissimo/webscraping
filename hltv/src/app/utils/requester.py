@@ -3,7 +3,11 @@ from urllib.error import HTTPError, URLError
 from bs4 import BeautifulSoup
 from time import sleep
 from random import randrange
+from .klog.log import Log
 import json
+
+log = Log(__name__)
+log.append('Requester')
 
 
 def get_page(url) -> BeautifulSoup:
@@ -57,14 +61,14 @@ def perform_request_and_get_response(url):
 
         response = urlopen(request)
 
-        print(f"[*] {url}")
+        log.append(f"[*] {url}")
     except HTTPError as e:
-        print(e)
-        print(f"[x] Failed to get: {url}")
+        log.append(e)
+        log.append(f"[x] Failed to get: {url}")
     except URLError as e:
-        print(e)
-        print(f"[x] Failed to get: {url}")
+        log.append(e)
+        log.append(f"[x] Failed to get: {url}")
     except:
-        print(f'[x] failed to get: {url}')
+        log.append(f'[x] failed to get: {url}')
     finally:
         return response
