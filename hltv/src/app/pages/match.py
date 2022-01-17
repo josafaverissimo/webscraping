@@ -199,6 +199,10 @@ class Match(Page):
 
     def __store_match_data(self):
         page_data = self.get_page_data()
+
+        if page_data is None:
+            return None
+
         match_orm: Orm = self.get_orm()
 
         event_orm: Orm = match_orm.get_relationship_orm('events')
@@ -239,6 +243,8 @@ class Match(Page):
             'bans': self.__match_map_banned_orm
         }
 
+        rows = []
+
         if votation is not None:
             for vote in votation:
                 orm: Orm = orms_by_vote[vote]
@@ -262,9 +268,15 @@ class Match(Page):
                     })
 
                     if row_stored is None:
-                        orm.create()
+                        row_stored = orm.create()
+
+                    rows.append(row_stored)
+
+        return rows
 
     def __store_match_team_maps_results(self, maps_results):
+        rows = []
+
         if maps_results is not None:
             for map_name in maps_results:
                 map_result = maps_results[map_name]
@@ -287,11 +299,25 @@ class Match(Page):
                 })
 
                 if match_team_map_result_stored is None:
-                    self.__match_team_map_result_orm.create()
+                    match_team_map_result_stored = self.__match_team_map_result_orm.create()
+
+                rows.append(match_team_map_result_stored)
+
+        return rows
 
     def __store_teams_match_data(self):
         page_data = self.get_page_data()
+
+        if page_data is None:
+            return None
+
         match_data_by_team = page_data['match_data_by_team']
+
+        team_match_rows = {
+            'team_result': [],
+            'team_match_votation': [],
+            'team_maps_results': []
+        }
 
         for team_name in match_data_by_team:
             self.__set_team_page_data_from_team_name(team_name)
@@ -304,9 +330,20 @@ class Match(Page):
             team_orm = self.__team_page.get_orm()
             team_orm.load_by_column('hltv_id')
 
-            self.__store_match_team_result(result)
-            self.__store_match_votation(votation)
-            self.__store_match_team_maps_results(maps_results)
+            team_result_row = self.__store_match_team_result(result)
+            team_votation_row = self.__store_match_votation(votation)
+            team_maps_results_row = self.__store_match_team_maps_results(maps_results)
+
+            if team_result_row is not None:
+                team_match_rows['team_result'].append(team_result_row)
+
+            if team_votation_row is not None:
+                team_match_rows['team_match_votation'].append(team_votation_row)
+
+            if team_maps_results_row is not None:
+                team_match_rows['team_maps_results'].append(team_maps_results_row)
+
+        return team_match_rows
 
     def get_match_result_from_page(self, page):
         wrapper = page.find('div', {'class': {'standard-box', 'teamsBox'}})
@@ -452,5 +489,10 @@ class Match(Page):
         return None
 
     def store(self):
-        self.__store_match_data()
-        self.__store_teams_match_data()
+        match_row = self.__store_match_data()
+        team_match_data_rows = self.__store_teams_match_data()
+
+        return {
+            'match_row': match_row,
+            'team_match_data_rows': team_match_data_rows
+        }
