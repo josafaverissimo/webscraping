@@ -7,13 +7,12 @@ class Log:
         path = "/".join(package_name.split('.')[1:])
 
         self.__log_appdata = Appdata(__package__, path)
-        self.__package_name = package_name
 
     def __get_appdata(self):
         return self.__log_appdata
 
     def append(self, content):
         appdata = self.__get_appdata()
-        content += f" {datetime.today().isoformat()}"
+        content += f" {datetime.today().isoformat()}\n"
 
         appdata.save(content)

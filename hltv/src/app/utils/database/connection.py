@@ -1,8 +1,24 @@
-from .db_configs import default_config
 import pymysql
+from .db_configs import default_config
+from ..klog.log import Log
 
 
 class Sql:
+    def __init__(self):
+        self.__log = Log(__name__)
+        self.__error_log = None
+
+        self._last_query = None
+        self._affected_rows = None
+
+        self.connection = None
+        self.cursor = None
+        self
+
+    def __log_message(self, message):
+        self.__log.append('Connection')
+        self.__log.append(message)
+
     def _normalize_args(self, args):
         args_normalized = []
 
@@ -53,19 +69,13 @@ class Sql:
         try:
             self._affected_rows = self.cursor.execute(query)
         except pymysql.err.MySQLError as e:
-            self.__error_log = f'\n[{e.args[0]}]\n\t{e.args[1]}\n\n[Last query]\n\t{query}\n'
-            self.failed(show_log=True)
+            self.__error_log = f'[{e.args[0]}]\n\t{e.args[1]}\n[Last query]\n\t{query}'
+            self.__log_message(self.__error_log)
         finally:
             return self
 
-    def failed(self, show_log=False):
-        if self.__error_log is None:
-            return False
-
-        if show_log:
-            print(self.__error_log)
-
-        return True
+    def failed(self):
+        return self.__error_log is not None
 
     def fetchall(self):
         if(not self.failed()):
