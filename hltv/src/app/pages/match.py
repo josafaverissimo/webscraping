@@ -60,8 +60,8 @@ class Match(Page):
         return f"{hltv_id}/match"
 
     def __set_match_event_from_page(self, page):
-        wrapper = page.find('div', {'class': {'standard-box', 'teamsBox'}})
-        event_wrapper = wrapper.find('div', {'class', 'timeAndEvent'})
+        wrapper = page.select_one('div.standard-box.teamsBox')
+        event_wrapper = wrapper.select_one('div.timeAndEvent')
         event_partial_link = event_wrapper.select_one('.event.text-ellipsis').find('a').attrs['href']
         event_hltv_id = event_partial_link.split('/')[2]
         self.__event_page.set_searchable_data('hltv_id', event_hltv_id)
@@ -162,11 +162,6 @@ class Match(Page):
         valid_key = [key for key in dictonary_to_valid if key in valid_keys][0]
         missing_key = [key for key in valid_keys if key != valid_key][0]
         key_not_valid = keys_not_valid[0]
-
-        a = {
-            valid_key: dictonary_to_valid[valid_key],
-            missing_key: dictonary_to_valid[key_not_valid]
-        }
 
         return {
             valid_key: dictonary_to_valid[valid_key],
@@ -346,8 +341,8 @@ class Match(Page):
         return team_match_rows
 
     def get_match_result_from_page(self, page):
-        wrapper = page.find('div', {'class': {'standard-box', 'teamsBox'}})
-        teams = wrapper.findAll('div', {'class': 'team'})
+        wrapper = page.select_one('div.standard-box.teamsBox')
+        teams = wrapper.select('div.team')
         result_by_team = {}
 
         for team in teams:
@@ -369,12 +364,10 @@ class Match(Page):
         return result_by_team
 
     def get_match_timestamp_from_page(self, page):
-        wrapper = page.find('div', {'class': {'standard-box', 'teamsBox'}})
-        timestamp_wrapper = wrapper.find('div', {'class', 'timeAndEvent'})
+        wrapper = page.select_one('div.standard-box.teamsBox')
+        timestamp_wrapper = wrapper.select_one('div.timeAndEvent')
 
-        timestamp = int(timestamp_wrapper.find(
-            'div', {'class': 'time'}
-        ).attrs['data-unix']) / 1000
+        timestamp = int(timestamp_wrapper.select_one('div.time').attrs['data-unix']) / 1000
 
         return timestamp
 
