@@ -19,6 +19,7 @@ class Appdata:
         self.__work_partial_path = "/".join(package_name.split('.')[1:]) + sub_path
         self.__default_filename = default_filename
 
+        helpers.makedirs_from_path(self.__appdata_path)
         helpers.makedirs_from_path(os.path.join(self.__appdata_path, self.__work_partial_path))
 
     def __get_work_path(self):
